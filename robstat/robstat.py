@@ -152,7 +152,7 @@ def geometric_median(data, weights=None, init_guess=None):
     return resx
 
 
-def tukey_median(data):
+def tukey_median(data, weights=None):
     """
     Tukey median calculated using the TukeyRegion R package.
 
@@ -163,6 +163,7 @@ def tukey_median(data):
 
     Args:
         data (ndarray): n-dimensional data.
+        weights (ndarray): array of integer weights associated with the values in data.
 
     Returns:
         Tukey median (ndarray).
@@ -173,12 +174,19 @@ def tukey_median(data):
     else:
         rpy2.robjects.numpy2ri.activate()
         stdout = io.StringIO()
+
+        # repeat entries by weights
+        if weights is not None:
+            assert weights.dtype == int, "Weights must be integers"
+            data = np.repeat(data, weights, axis=0)
+
         with redirect_stdout(stdout): # suppress output
             TR_res = TukeyRegion.TukeyMedian(data)
+
         return dict(TR_res.items())
 
 
-def mv_median(data, method, approx=False, eps=1e-8):
+def mv_median(data, method, weights=None, approx=False, eps=1e-8):
     """
     Multivariate median using the 'depth' package in R.
 
@@ -191,6 +199,7 @@ def mv_median(data, method, approx=False, eps=1e-8):
         data (ndarray): n-dimensional data.
         method (str): determines the depth function used (e.g. 'Tukey',
         'Oja', 'Spatial')
+        weights (ndarray): array of integer weights associated with the values in data.
         approx (bool): should an approximate Tukey median be computed? Useful in
         dimension 2 only when sample size is large.
         eps (float): error tolerance to control the calculation.
@@ -204,8 +213,15 @@ def mv_median(data, method, approx=False, eps=1e-8):
     else:
         rpy2.robjects.numpy2ri.activate()
         stdout = io.StringIO()
+
+        # repeat entries by weights
+        if weights is not None:
+            assert weights.dtype == int, "Weights must be integers"
+            data = np.repeat(data, weights, axis=0)
+
         with redirect_stdout(stdout): # suppress output
             TR_res = depth.med(data, method=method)
+
         return dict(TR_res.items())
 
 
