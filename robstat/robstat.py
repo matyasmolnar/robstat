@@ -40,7 +40,7 @@ except ImportError:
 from . import utils
 
 
-def circ_mean_dev(angles, angle_est):
+def circ_mean_dev(angles, angle_est, weights=None):
     """
     Circular mean deviation (Fisher, 1993, p. 35-36)
 
@@ -51,7 +51,12 @@ def circ_mean_dev(angles, angle_est):
     Returns:
         Circular mean deviation (float)
     """
-    return jnp.pi - 1 / angles.size * jnp.abs(jnp.pi - jnp.abs(angles - angle_est)).sum()
+    if weights is None:
+        return jnp.pi - 1 / angles.size * jnp.abs(jnp.pi - jnp.abs(angles - \
+            angle_est)).sum()
+    else:
+        return jnp.pi - 1 / weights.sum() * (weights * jnp.abs(jnp.pi - \
+            jnp.abs(angles - angle_est))).sum()
 
 
 def circ_med_dev(angles, angle_est):
@@ -68,13 +73,15 @@ def circ_med_dev(angles, angle_est):
     return jnp.med(jnp.pi - jnp.abs(jnp.pi - jnp.abs(angles - angle_est)))
 
 
-def mardia_median(angles, init_guess=None):
+def mardia_median(angles, weights=None, init_guess=None):
     """
     Minimize the circular median deviation to obtain the "Mardia Median"
     (1972, p. 28,31). Note that this angle is not necessarily unique.
 
     Args:
         angles (ndarray): Angles in radians.
+        weights (ndarray): array of weights associated with the values in data.
+        init_guess (float): initial guess for the Mardia median.
 
     Returns:
         Mardia median (float).
@@ -85,7 +92,10 @@ def mardia_median(angles, init_guess=None):
         if not isinstance(init_guess, (np.ndarray, jnp.ndarray)):
             init_guess = np.array([init_guess])
 
-    ff = JJ(functools.partial(circ_mean_dev, angles))
+    # reorder arguments for partial fill
+    _cmd = lambda a, w, i : circ_mean_dev(a, i, weights=w)
+    ff = JJ(functools.partial(_cmd, angles, weights))
+
     res = jminimize(ff, init_guess, method='bfgs', options={'maxiter':3000}, \
                     tol=1e-8)
     if pJAX:
@@ -93,7 +103,7 @@ def mardia_median(angles, init_guess=None):
     return res['x'].item()
 
 
-def geometric_median(data, init_guess=None):
+def geometric_median(data, weights=None, init_guess=None):
     """
     Geometric median. Also known as the L1-median.
 
@@ -103,6 +113,8 @@ def geometric_median(data, init_guess=None):
 
     Args:
         data (ndarray): n-dimensional data.
+        weights (ndarray): array of weights associated with the values in data.
+        init_guess (ndarray): initial guess for the geometric median.
 
     Returns:
         Geometric median (ndarray).
@@ -119,15 +131,20 @@ def geometric_median(data, init_guess=None):
     if init_guess is None:
         init_guess = np.zeros(data.shape[1])
 
-    def agg_dist(x):
+    def agg_dist(weights, x):
         """
         Aggregate distance objective function for minimizer.
 
         Note that parameters initial guess must be a single element ndarray.
         """
-        return cdist(x * np.ones_like(data), data, metric='euclidean')[0, :].sum()
+        if weights is None:
+            return cdist(x * np.ones_like(data), data, metric='euclidean')[0, :].sum()
+        else:
+            return (weights*cdist(x * np.ones_like(data), data, metric='euclidean')[0, :]).sum()
 
-    resx = minimize(agg_dist, init_guess, method='bfgs', options={'maxiter':3000}, \
+    ff = functools.partial(agg_dist, weights)
+
+    resx = minimize(ff, init_guess, method='bfgs', options={'maxiter':3000}, \
                     tol=1e-8)['x']
     if Cdata:
         resx = resx[0] + resx[1]*1j
