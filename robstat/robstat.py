@@ -112,7 +112,9 @@ def geometric_median(data, weights=None, init_guess=None):
     TODO: rewrite cdist in euclidian space for this module.
 
     Args:
-        data (ndarray): n-dimensional data.
+        data (ndarray): n-dimensional data. Array must be coordinates of ndim = 2,
+        with shape [# data points, n-coordinates]
+
         weights (ndarray): array of weights associated with the values in data.
         init_guess (ndarray): initial guess for the geometric median.
 
@@ -130,6 +132,13 @@ def geometric_median(data, weights=None, init_guess=None):
 
     if init_guess is None:
         init_guess = np.zeros(data.shape[1])
+
+    # remove rows with nan coordinates
+    if np.isnan(data).any():
+        nan_idx = ~np.isnan(data).any(axis=1)
+        data = data[nan_idx, :]
+        if weights is not None:
+            weights = weights[nan_idx]
 
     def agg_dist(weights, x):
         """
@@ -175,6 +184,13 @@ def tukey_median(data, weights=None):
         rpy2.robjects.numpy2ri.activate()
         stdout = io.StringIO()
 
+        # remove rows with nan coordinates
+        if np.isnan(data).any():
+            nan_idx = ~np.isnan(data).any(axis=1)
+            data = data[nan_idx, :]
+            if weights is not None:
+                weights = weights[nan_idx]
+
         # repeat entries by weights
         if weights is not None:
             assert weights.dtype == int, "Weights must be integers"
@@ -213,6 +229,13 @@ def mv_median(data, method, weights=None, approx=False, eps=1e-8):
     else:
         rpy2.robjects.numpy2ri.activate()
         stdout = io.StringIO()
+
+        # remove rows with nan coordinates
+        if np.isnan(data).any():
+            nan_idx = ~np.isnan(data).any(axis=1)
+            data = data[nan_idx, :]
+            if weights is not None:
+                weights = weights[nan_idx]
 
         # repeat entries by weights
         if weights is not None:
