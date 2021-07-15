@@ -1,7 +1,13 @@
 """Utility functions"""
 
 
+import os
+from pathlib import Path
+
 import numpy as np
+
+
+DATAPATH = os.path.join(Path(__file__).parent.absolute(), 'data')
 
 
 def decomposeCArray(arr):
