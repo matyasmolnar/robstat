@@ -40,6 +40,31 @@ except ImportError:
 from . import utils
 
 
+def omit_nans(data, weights):
+    """
+    Remove nans from array
+
+    Args:
+        data (ndarray): input data.
+        weights (ndarray): array of weights associated with the values in data.
+
+    Returns:
+        Filtered data and weights arrays (ndarray)
+    """
+    if data.ndim <= 2:
+        if data.ndim == 1:
+            nan_idx = ~np.isnan(data)
+            data = data[nan_idx]
+        if data.ndim == 2:
+            nan_idx = ~np.isnan(data).any(axis=1)
+            data = data[nan_idx, :]
+        if weights is not None:
+            weights = weights[nan_idx]
+    else:
+        raise ValueError('data must be either a 1D or 2D ndarray.')
+    return data, weights
+
+
 def circ_mean_dev(angles, angle_est, weights=None):
     """
     Circular mean deviation (Fisher, 1993, p. 35-36)
@@ -51,6 +76,9 @@ def circ_mean_dev(angles, angle_est, weights=None):
     Returns:
         Circular mean deviation (float)
     """
+    if np.isnan(angles).any():
+        angles, weights = omit_nans(angles, weights)
+
     if weights is None:
         return jnp.pi - 1 / angles.size * jnp.abs(jnp.pi - jnp.abs(angles - \
             angle_est)).sum()
@@ -70,6 +98,8 @@ def circ_med_dev(angles, angle_est):
     Returns:
         Circular median deviation (float)
     """
+    if np.isnan(angles).any():
+        angles = angles[~np.isnan(angles)]
     return jnp.med(jnp.pi - jnp.abs(jnp.pi - jnp.abs(angles - angle_est)))
 
 
@@ -86,6 +116,9 @@ def mardia_median(angles, weights=None, init_guess=None):
     Returns:
         Mardia median (float).
     """
+    if np.isnan(angles).any():
+        angles, weights = omit_nans(angles, weights)
+
     if init_guess is None:
         init_guess = jnp.array([stats.circmean(angles)])
     else:
@@ -135,10 +168,7 @@ def geometric_median(data, weights=None, init_guess=None):
 
     # remove rows with nan coordinates
     if np.isnan(data).any():
-        nan_idx = ~np.isnan(data).any(axis=1)
-        data = data[nan_idx, :]
-        if weights is not None:
-            weights = weights[nan_idx]
+        data, weights = omit_nans(data, weights)
 
     def agg_dist(weights, x):
         """
@@ -186,10 +216,14 @@ def tukey_median(data, weights=None):
 
         # remove rows with nan coordinates
         if np.isnan(data).any():
-            nan_idx = ~np.isnan(data).any(axis=1)
-            data = data[nan_idx, :]
-            if weights is not None:
-                weights = weights[nan_idx]
+            data, weights = omit_nans(data, weights)
+
+        # separate to matrix if data is is complex
+        if np.iscomplexobj(data):
+            Cdata = True
+            data = utils.decomposeCArray(data)
+        else:
+            Cdata = False
 
         # repeat entries by weights
         if weights is not None:
@@ -199,7 +233,13 @@ def tukey_median(data, weights=None):
         with redirect_stdout(stdout): # suppress output
             TR_res = TukeyRegion.TukeyMedian(data)
 
-        return dict(TR_res.items())
+        res = dict(TR_res.items())
+
+        if Cdata:
+            bcenter = res['barycenter']
+            res['barycenter'] = bcenter[0] + bcenter[1]*1j
+
+        return res
 
 
 def mv_median(data, method, weights=None, approx=False, eps=1e-8):
@@ -232,10 +272,7 @@ def mv_median(data, method, weights=None, approx=False, eps=1e-8):
 
         # remove rows with nan coordinates
         if np.isnan(data).any():
-            nan_idx = ~np.isnan(data).any(axis=1)
-            data = data[nan_idx, :]
-            if weights is not None:
-                weights = weights[nan_idx]
+            data, weights = omit_nans(data, weights)
 
         # repeat entries by weights
         if weights is not None:
