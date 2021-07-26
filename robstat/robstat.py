@@ -126,7 +126,7 @@ def mardia_median(angles, weights=None, init_guess=None):
             init_guess = np.array([init_guess])
 
     # reorder arguments for partial fill
-    _cmd = lambda a, w, i : circ_mean_dev(a, i, weights=w)
+    _cmd = lambda a, w, i: circ_mean_dev(a, i, weights=w)
     ff = JJ(functools.partial(_cmd, angles, weights))
 
     res = jminimize(ff, init_guess, method='bfgs', options={'maxiter':3000}, \
@@ -136,13 +136,29 @@ def mardia_median(angles, weights=None, init_guess=None):
     return res['x'].item()
 
 
+def cdist_jax(arr_A, arr_B):
+    """
+    Euclidean distance written with numpy functions - can be accelerated in JAX,
+    while scipy.spatial.distance.cdist cannot be (as of yet).
+
+    Args:
+        arr_A (ndarray):
+        arr_B (ndarray):
+
+        weights (ndarray): array of weights associated with the values in data.
+        init_guess (ndarray): initial guess for the geometric median.
+
+    Returns:
+        Euclidean distances between the input arrays (ndarray)
+    """
+    return jnp.sqrt(jnp.sum(jnp.square(arr_A - arr_B), axis=1))
+
+
 def geometric_median(data, weights=None, init_guess=None):
     """
     Geometric median. Also known as the L1-median.
 
     JAX acceleration not yet available for scipy.spatial.distance.
-
-    TODO: rewrite cdist in euclidian space for this module.
 
     Args:
         data (ndarray): n-dimensional data. Array must be coordinates of ndim = 2,
@@ -170,18 +186,30 @@ def geometric_median(data, weights=None, init_guess=None):
     if np.isnan(data).any():
         data, weights = omit_nans(data, weights)
 
-    def agg_dist(weights, x):
+    if not pJAX:
+        eucl_dist = functools.partial(lambda m, XA, XB: cdist(XA, XB, metric=m), 'euclidean')
+    else:
+        eucl_dist = cdist_jax
+
+    def agg_dist(weights, pJ, x):
         """
         Aggregate distance objective function for minimizer.
 
         Note that parameters initial guess must be a single element ndarray.
         """
         if weights is None:
-            return cdist(x * np.ones_like(data), data, metric='euclidean')[0, :].sum()
+            ed =  eucl_dist(x * np.ones_like(data), data)
         else:
-            return (weights*cdist(x * np.ones_like(data), data, metric='euclidean')[0, :]).sum()
+            ed =  weights*eucl_dist(x * np.ones_like(data), data)
 
-    ff = functools.partial(agg_dist, weights)
+        # cdist from scipy returns a symmetric matrix
+        if not pJ:
+            ed = ed[0, :]
+
+        return ed.sum()
+
+
+    ff = JJ(functools.partial(agg_dist, weights, pJAX))
 
     resx = minimize(ff, init_guess, method='bfgs', options={'maxiter':3000}, \
                     tol=1e-8)['x']
