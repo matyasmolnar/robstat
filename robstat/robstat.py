@@ -235,9 +235,14 @@ def tukey_median(data, weights=None):
 
         res = dict(TR_res.items())
 
-        if Cdata:
-            bcenter = res['barycenter']
-            res['barycenter'] = bcenter[0] + bcenter[1]*1j
+        if not res['innerPointFound'][0]:
+            res['barycenter'] = np.nan
+            print('Inner point of the region has not been found; nan returned '\
+                  'for the barycenter.')
+        else:
+            if Cdata:
+                bcenter = res['barycenter']
+                res['barycenter'] = bcenter[0] + bcenter[1]*1j
 
         return res
 
