@@ -205,6 +205,9 @@ def geometric_median(data, weights=None, init_guess=None):
 
     if init_guess is None:
         init_guess = np.zeros(data.shape[1])
+    # init_guess could be nan if it is reused in a loop
+    elif np.isnan(init_guess):
+        init_guess = np.zeros(data.shape[1])
     elif np.iscomplexobj(init_guess):
         init_guess = np.array([init_guess.real, init_guess.imag])
 
@@ -237,10 +240,20 @@ def geometric_median(data, weights=None, init_guess=None):
 
     ff = JJ(functools.partial(agg_dist, weights, pJAX))
 
-    resx = minimize(ff, init_guess, method='bfgs', options={'maxiter':3000}, \
-                    tol=1e-8)['x']
-    if Cdata:
-        resx = resx[0] + resx[1]*1j
+    res = jminimize(ff, init_guess, method='bfgs', options={'maxiter':3000}, \
+                    tol=1e-8)
+    if pJAX:
+        res = res._asdict()
+        success = res['success'].item()
+    else:
+        success = res['success']
+
+    if not success:
+        resx = np.nan
+    elif Cdata:
+        resx = res['x'][0] + res['x'][1]*1j
+    else:
+        resx = res['x']
 
     return resx
 
