@@ -8,13 +8,13 @@ from matplotlib import ticker
 
 
 def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None, \
-                 center=None, annot=False, fmt=None, xbase=5, ybase=10, \
+                 center=None, annot=False, fmt=None, xbase=5, ybase=10, titles=None, \
                  figsize=(14, 6)):
     """
     Plot a row of heatmaps with shared colour bar.
 
     Args:
-        arrs (ndarray): list of ndarrays to plot.
+        arrs (list): list of ndarrays to plot.
         apply_np_fn (str): numpy function to apply to arrs.
         clip_pctile (float): top and bottom percentile of data to clip. No clipping
         if None.
@@ -23,6 +23,7 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
         annot (bool): list of ndarrays to plot.
         fmt (str): string formatting code to use when adding annotations.
         xbase, ybase (int): set a tick on each integer multiple of the base.
+        titles (list): list of strings to set as titles.
         figsize (tuple): width, height in inches.
     """
     if isinstance(arrs, np.ndarray):
@@ -56,6 +57,8 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
                     yticklabels=yticklabels)
         ax.xaxis.set_major_locator(ticker.MultipleLocator(xbase))
         ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
+        if titles is not None:
+            ax.set_title(titles[i])
         if i == 0:
             ax.yaxis.set_major_locator(ticker.MultipleLocator(ybase))
             ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
