@@ -216,7 +216,8 @@ def geometric_median(data, weights=None, init_guess=None):
         data, weights = omit_nans(data, weights)
 
     if not pJAX:
-        eucl_dist = functools.partial(lambda m, XA, XB: cdist(XA, XB, metric=m), 'euclidean')
+        eucl_dist = functools.partial(lambda m, XA, XB: cdist(XA, XB, metric=m), \
+                                      'euclidean')
     else:
         eucl_dist = cdist_jax
 
@@ -229,14 +230,13 @@ def geometric_median(data, weights=None, init_guess=None):
         if weights is None:
             ed =  eucl_dist(x * np.ones_like(data), data)
         else:
-            ed =  weights*eucl_dist(x * np.ones_like(data), data)
+            ed =  weights * eucl_dist(x * np.ones_like(data), data)
 
         # cdist from scipy returns a symmetric matrix
         if not pJ:
             ed = ed[0, :]
 
         return ed.sum()
-
 
     ff = JJ(functools.partial(agg_dist, weights, pJAX))
 
