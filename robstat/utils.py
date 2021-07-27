@@ -25,4 +25,8 @@ def decomposeCArray(arr):
     """
     assert arr.ndim == 1
     assert arr.dtype  == np.complex
-    return np.vstack((arr.real, arr.imag)).transpose()
+    dcmp_arr = np.vstack((arr.real, arr.imag)).transpose()
+    # make corresponding imag cells to nan values also nan
+    if np.isnan(dcmp_arr).any():
+        dcmp_arr[:, 1][np.isnan(dcmp_arr)[:, 0]] = np.nan
+    return dcmp_arr
