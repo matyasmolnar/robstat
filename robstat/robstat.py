@@ -70,8 +70,8 @@ def circ_mean_dev(angles, angle_est, weights=None):
     Circular mean deviation (Fisher, 1993, p. 35-36)
 
     Args:
-        angles (ndarray): Angles in radians.
-        angle_est (float, int): Angle estimate.
+        angles (ndarray): angles in radians.
+        angle_est (float, int): angle estimate.
 
     Returns:
         Circular mean deviation (float)
@@ -92,8 +92,8 @@ def circ_med_dev(angles, angle_est):
     Circular median deviation
 
     Args:
-        angles (ndarray): Angles in radians.
-        angle_est (float, int): Angle estimate.
+        angles (ndarray): angles in radians.
+        angle_est (float, int): angle estimate.
 
     Returns:
         Circular median deviation (float)
@@ -109,7 +109,7 @@ def mardia_median(angles, weights=None, init_guess=None):
     (1972, p. 28,31). Note that this angle is not necessarily unique.
 
     Args:
-        angles (ndarray): Angles in radians.
+        angles (ndarray): angles in radians.
         weights (ndarray): array of weights associated with the values in data.
         init_guess (float): initial guess for the Mardia median.
 
@@ -134,6 +134,30 @@ def mardia_median(angles, weights=None, init_guess=None):
     if pJAX:
         res = res._asdict()
     return res['x'].item()
+
+
+def Cmardia_median(Carr, weights=None, init_guess=None):
+    """
+    Median estimate of a complex number, with the angle calculated using the Mardia
+    median and the absolute value calculated separately using median.
+
+    Illustrative function=, not to be used for data analysis.
+
+    Args:
+        Carr (ndarray): complex array.
+        weights (ndarray): array of weights associated with the values in Carr.
+        init_guess (float): initial guess for the Mardia median (complex tuple).
+        Only the angle part will be used.
+
+    Returns:
+        Median estimate (complex tuple).
+    """
+    if init_guess is not None:
+        init_guess = np.angle(init_guess) # only use phase
+    med_vis_amp = np.nanmedian(np.abs(Carr))
+    mmed_vis_phase = mardia_median(np.angle(Carr), weights=weights, \
+                                   init_guess=init_guess)
+    return med_vis_amp * np.exp(1j * mmed_vis_phase)
 
 
 def cdist_jax(arr_A, arr_B):
@@ -181,6 +205,8 @@ def geometric_median(data, weights=None, init_guess=None):
 
     if init_guess is None:
         init_guess = np.zeros(data.shape[1])
+    elif np.iscomplexobj(init_guess):
+        init_guess = np.array([init_guess.real, init_guess.imag])
 
     # remove rows with nan coordinates
     if np.isnan(data).any():
@@ -309,7 +335,7 @@ def mv_median(data, method, weights=None, approx=False, eps=1e-8):
 
         # repeat entries by weights
         if weights is not None:
-            assert weights.dtype == int, "Weights must be integers"
+            assert weights.dtype == int, 'Weights must be integers'
             data = np.repeat(data, weights, axis=0)
 
         with redirect_stdout(stdout): # suppress output
