@@ -274,8 +274,8 @@ def tukey_median(data, weights=None):
     Returns:
         Tukey median (ndarray).
     """
-    if TukeyRegion is None:
-        print('TukeyRegion R package not installed.')
+    if not pR:
+        print('rpy2 Python-R bridge not installed and/or TukeyRegion R package not installed.')
         return None
     else:
         rpy2.robjects.numpy2ri.activate()
@@ -336,7 +336,7 @@ def mv_median(data, method, weights=None, approx=False, eps=1e-8):
         Multivariate median (ndarray).
     """
     if not pR:
-        print('depth R package not installed.')
+        print('rpy2 Python-R bridge not installed and/or depth R package not installed.')
         return None
     else:
         rpy2.robjects.numpy2ri.activate()
