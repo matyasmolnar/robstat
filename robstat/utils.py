@@ -30,3 +30,13 @@ def decomposeCArray(arr):
     if np.isnan(dcmp_arr).any():
         dcmp_arr[:, 1][np.isnan(dcmp_arr)[:, 0]] = np.nan
     return dcmp_arr
+
+
+def round_up(n, decimals=0):
+    multiplier = 10 ** decimals
+    return np.ceil(n * multiplier) / multiplier
+
+
+def round_down(n, decimals=0):
+    multiplier = 10 ** decimals
+    return np.floor(n * multiplier) / multiplier
