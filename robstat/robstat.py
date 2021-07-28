@@ -10,21 +10,28 @@ from scipy import stats
 from scipy.optimize import minimize
 from scipy.spatial.distance import cdist
 
-# attempt to import the JAX library for acceleration
-# below allows a one-line switch to JAX
-try:
-    pJAX = True
-    from jax.config import config
-    config.update('jax_enable_x64', True)
-    import jax
-    from jax import numpy as jnp
-    from jax import jit as JJ
-    from jax.scipy.optimize import minimize as jminimize
-except ImportError:
-    pJAX = False
-    jnp = np
-    JJ = lambda x: x
-    jminimize = minimize
+# # attempt to import the JAX library for acceleration
+# # below allows a one-line switch to JAX
+# try:
+#     pJAX = True
+#     from jax.config import config
+#     config.update('jax_enable_x64', True)
+#     import jax
+#     from jax import numpy as jnp
+#     from jax import jit as JJ
+#     from jax.scipy.optimize import minimize as jminimize
+# except ImportError:
+#     pJAX = False
+#     jnp = np
+#     JJ = lambda x: x
+#     jminimize = minimize
+
+# JAX slows down minimization for geometric_median
+# investigate and use normal scipy for time being
+pJAX = False
+jnp = np
+JJ = lambda x: x
+jminimize = minimize
 
 # Tukey median package from R
 try:
@@ -182,7 +189,8 @@ def cdist_jax(arr_A, arr_B):
     return jnp.sqrt(jnp.sum(jnp.square(arr_A - arr_B), axis=1))
 
 
-def geometric_median(data, weights=None, init_guess=None):
+def geometric_median(data, weights=None, init_guess=None, tol=1e-3, \
+                     keep_res=False, verbose=False):
     """
     Geometric median. Also known as the L1-median.
 
@@ -191,9 +199,13 @@ def geometric_median(data, weights=None, init_guess=None):
     Args:
         data (ndarray): n-dimensional data. Array must be coordinates of ndim = 2,
         with shape [# data points, n-coordinates]
-
         weights (ndarray): array of weights associated with the values in data.
-        init_guess (ndarray): initial guess for the geometric median.
+        init_guess (ndarray): initial guess for the geometric median. Can specify
+        'median' or 'mean' to choose those as starting points.
+        tol (float): tolerance used for minimization
+        keep_res (bool): keep result from unsuccesful minimization instead of
+        replacing with nan
+        verbose (bool): status updates of geometric median computation
 
     Returns:
         Geometric median (ndarray).
@@ -209,6 +221,10 @@ def geometric_median(data, weights=None, init_guess=None):
 
     if init_guess is None:
         init_guess = np.zeros(data.shape[1])
+    elif init_guess == 'median':
+        init_guess = np.nanmedian(data, axis=0)
+    elif init_guess == 'mean':
+        init_guess = np.nanmean(data, axis=0)
     # init_guess could be nan if it is reused in a loop
     elif np.isnan(init_guess):
         init_guess = np.zeros(data.shape[1])
@@ -236,7 +252,7 @@ def geometric_median(data, weights=None, init_guess=None):
         else:
             ed =  weights * eucl_dist(x * np.ones_like(data), data)
 
-        # cdist from scipy returns a symmetric matrix
+        # cdist from scipy returns a matrix with every row the same
         if not pJAX:
             ed = ed[0, :]
 
@@ -245,19 +261,24 @@ def geometric_median(data, weights=None, init_guess=None):
     ff = JJ(functools.partial(agg_dist, weights))
 
     res = jminimize(ff, init_guess, method='bfgs', options={'maxiter':3000}, \
-                    tol=1e-8)
+                    tol=tol)
     if pJAX:
         res = res._asdict()
         success = res['success'].item()
+        utils.echo(res['status'], verbose=verbose)
     else:
         success = res['success']
+        utils.echo(res['message'], verbose=verbose)
 
-    if not success:
-        resx = np.nan
-    elif Cdata:
+    if Cdata:
         resx = res['x'][0] + res['x'][1]*1j
     else:
         resx = res['x']
+
+    if not success and not keep_res:
+        utils.echo('Minimization unsuccesful - nan returned', \
+                   verbose=verbose)
+        resx = np.nan
 
     return resx
 
@@ -309,7 +330,7 @@ def tukey_median(data, weights=None):
 
         # repeat entries by weights
         if weights is not None:
-            assert weights.dtype == int, "Weights must be integers"
+            assert weights.dtype == int, 'Weights must be integers'
             data = np.repeat(data, weights, axis=0)
 
         with redirect_stdout(stdout): # suppress output
