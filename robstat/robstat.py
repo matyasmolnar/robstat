@@ -125,6 +125,10 @@ def mardia_median(angles, weights=None, init_guess=None):
         if not isinstance(init_guess, (np.ndarray, jnp.ndarray)):
             init_guess = np.array([init_guess])
 
+    # wrap init_guess angle between -pi and pi
+    if np.abs(init_guess) >= np.pi:
+        init_guess = (init_guess + np.pi) % (2 * np.pi) - np.pi
+
     # reorder arguments for partial fill
     _cmd = lambda a, w, i: circ_mean_dev(a, i, weights=w)
     ff = JJ(functools.partial(_cmd, angles, weights))
@@ -221,7 +225,7 @@ def geometric_median(data, weights=None, init_guess=None):
     else:
         eucl_dist = cdist_jax
 
-    def agg_dist(weights, pJ, x):
+    def agg_dist(weights, x):
         """
         Aggregate distance objective function for minimizer.
 
@@ -233,12 +237,12 @@ def geometric_median(data, weights=None, init_guess=None):
             ed =  weights * eucl_dist(x * np.ones_like(data), data)
 
         # cdist from scipy returns a symmetric matrix
-        if not pJ:
+        if not pJAX:
             ed = ed[0, :]
 
         return ed.sum()
 
-    ff = JJ(functools.partial(agg_dist, weights, pJAX))
+    ff = JJ(functools.partial(agg_dist, weights))
 
     res = jminimize(ff, init_guess, method='bfgs', options={'maxiter':3000}, \
                     tol=1e-8)
@@ -285,12 +289,23 @@ def tukey_median(data, weights=None):
         if np.isnan(data).any():
             data, weights = omit_nans(data, weights)
 
+        null_res = {'depth': np.nan, 'innerPointFound':False, 'barycenter': np.nan}
+
+        if data.size == 0:
+            print('No non-nan input data; Tukey median cannot be returned.')
+            return null_res
+
         # separate to matrix if data is is complex
         if np.iscomplexobj(data):
             Cdata = True
             data = utils.decomposeCArray(data)
         else:
             Cdata = False
+
+        if data.shape[0] <= data.shape[1]:
+            print('Input data should be a matrix with at least d = 2 columns '\
+                  'and at least d + 1 rows')
+            return null_res
 
         # repeat entries by weights
         if weights is not None:
