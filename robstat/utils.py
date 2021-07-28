@@ -10,6 +10,23 @@ import numpy as np
 DATAPATH = os.path.join(Path(__file__).parent.absolute(), 'data')
 
 
+def echo(message, type=0, verbose=True):
+    """One line printing of messages when verbose
+
+    Args:
+        message (str): message to print.
+        type (int): 0, 1 to specify wrapping if message
+        verbose (bool): if to print message or not
+    """
+    if verbose:
+        if type == 0:
+            print(message)
+        elif type == 1:
+            print('')
+            print(message)
+            print("-" * 40)
+
+
 def decomposeCArray(arr):
     """
     Reformat 1D complex array into 2D real array
