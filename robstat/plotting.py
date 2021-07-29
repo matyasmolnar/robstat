@@ -107,9 +107,9 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
         if not all([len(l) == next_len for l in it]):
             raise ValueError('arrs must be a list of lists of the same length')
 
-    width_ratios = np.append(np.ones(len(arrs[0])), [0.05*len(arrs[0])])
+    width_ratios = np.append(np.ones(len(arrs)), [0.05*len(arrs)])
 
-    fig, axes = plt.subplots(nrows=len(arrs), ncols=len(arrs[0])+1, figsize=figsize, \
+    fig, axes = plt.subplots(nrows=len(arrs[0]), ncols=len(arrs)+1, figsize=figsize, \
                              gridspec_kw = {'width_ratios': width_ratios})
 
     if apply_np_fn is not None:
@@ -142,11 +142,17 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
     yticklabels = True
     for col, arr in enumerate(arrs):
         for row, a in enumerate(arr):
+            if row == len(arr) - 1:
+                xticklabels = True
+            else:
+                xticklabels = False
             ax = sns.heatmap(a, cmap=cmap, ax=axes[row][col], cbar=False, \
                         vmin=vmin, vmax=vmax, center=center, annot=annot, fmt=fmt, \
-                        yticklabels=yticklabels)
-            ax.xaxis.set_major_locator(ticker.MultipleLocator(xbase))
-            ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
+                        xticklabels=xticklabels, yticklabels=yticklabels)
+            if row == len(arr) - 1:
+                ax.set_xticklabels(ax.get_xticklabels(), rotation=0)
+                ax.xaxis.set_major_locator(ticker.MultipleLocator(xbase))
+                ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
             if titles is not None and row == 0:
                 ax.set_title(titles[col])
             if col == 0:
