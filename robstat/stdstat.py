@@ -16,6 +16,8 @@ def sigma_clip(data, flags=None, sigma=4.0, axis=0, min_N=4, verbose=False):
     Inspired by sigma_clip in HERA hera_cal sigma clipping routine for LST-binning:
     https://github.com/HERA-Team/hera_cal/blob/master/hera_cal/lstbin.py
 
+    Also see scipy.stats.sigmaclip and astropy.stats.sigma_clip.
+
     Args:
         data (ndarray): input data.
         flags (ndarray): existing boolean flags for data array. True if flagged.
