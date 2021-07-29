@@ -283,7 +283,7 @@ def geometric_median(data, weights=None, init_guess=None, tol=1e-3, \
     return resx
 
 
-def tukey_median(data, weights=None):
+def tukey_median(data, weights=None, verbose=False):
     """
     Tukey median calculated using the TukeyRegion R package.
 
@@ -295,6 +295,7 @@ def tukey_median(data, weights=None):
     Args:
         data (ndarray): n-dimensional data.
         weights (ndarray): array of integer weights associated with the values in data.
+        verbose (bool): status updates of tukey median computation
 
     Returns:
         Tukey median (ndarray).
@@ -313,7 +314,8 @@ def tukey_median(data, weights=None):
         null_res = {'depth': np.nan, 'innerPointFound':False, 'barycenter': np.nan}
 
         if data.size == 0:
-            print('No non-nan input data; Tukey median cannot be returned.')
+            utils.echo('No non-nan input data; Tukey median cannot be returned.', \
+                       verbose=verbose)
             return null_res
 
         # separate to matrix if data is is complex
@@ -324,8 +326,8 @@ def tukey_median(data, weights=None):
             Cdata = False
 
         if data.shape[0] <= data.shape[1]:
-            print('Input data should be a matrix with at least d = 2 columns '\
-                  'and at least d + 1 rows')
+            utils.echo('Input data should be a matrix with at least d = 2 columns '\
+                       'and at least d + 1 rows', verbose=verbose)
             return null_res
 
         # repeat entries by weights
@@ -340,8 +342,8 @@ def tukey_median(data, weights=None):
 
         if not res['innerPointFound'][0]:
             res['barycenter'] = np.nan
-            print('Inner point of the region has not been found; nan returned '\
-                  'for the barycenter.')
+            utils.echo('Inner point of the region has not been found; nan returned '\
+                       'for the barycenter.', verbose=verbose)
         else:
             if Cdata:
                 bcenter = res['barycenter']
