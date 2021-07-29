@@ -3,17 +3,7 @@
 
 import numpy as np
 
-# attempt to import the JAX library for acceleration
-# below allows a one-line switch to JAX
-try:
-    pJAX = True
-    from jax.config import config
-    config.update('jax_enable_x64', True)
-    import jax
-    from jax import numpy as jnp
-except ImportError:
-    pJAX = False
-    jnp = np
+from . import utils
 
 
 def sigma_clip(data, flags=None, sigma=4.0, axis=0, min_N=4, verbose=False):
@@ -45,12 +35,12 @@ def sigma_clip(data, flags=None, sigma=4.0, axis=0, min_N=4, verbose=False):
 
     sc_data = np.copy(data)
 
-    assert data.dtype  != np.complex # MAD clipping erroneous
+    assert not np.iscomplexobj(data) # MAD clipping erroneous if complex
 
     # ensure array passes min_N criteria:
     if data.shape[axis] < min_N:
-        print('No sigma clipping performed as length of array for specified axis ' \
-              '< min_N.')
+        utils.echo('No sigma clipping performed as length of array for specified axis ' \
+                   '< min_N.', verbose=verbose)
         if flags is None:
             flags = np.zeros_like(data, np.bool)
         return data, flags
@@ -77,13 +67,13 @@ def sigma_clip(data, flags=None, sigma=4.0, axis=0, min_N=4, verbose=False):
     # set clipped data to nan and set clipped flags to True
     sc_data[clip] *= np.nan
     clip_flags[clip] = True
-    if verbose:
-        print('{} data points MAD-clipped.'.format(clip_flags.sum()-flg_count))
+    utils.echo('{} data points MAD-clipped.'.format(clip_flags.sum()-flg_count), \
+               verbose=verbose)
 
     return sc_data, clip_flags
 
 
-def rsc_mean(data, flags=None, sigma=4.0, axis=0, min_N=4, verbose=False):
+def rsc_avg(data, stat, flags=None, sigma=4.0, axis=0, min_N=4, verbose=False):
     """
     Mean of data after robust sigma clipping.
 
@@ -91,6 +81,7 @@ def rsc_mean(data, flags=None, sigma=4.0, axis=0, min_N=4, verbose=False):
 
     Args:
         data (ndarray): input data.
+        stat (str): statistic to use for averaging ('mean', 'median').
         flags (ndarray): existing boolean flags for data array. True if flagged.
         sigma (ndarray): sigma threshold to cut above..
         axis (int): axis of array to perform mean over.
@@ -101,6 +92,11 @@ def rsc_mean(data, flags=None, sigma=4.0, axis=0, min_N=4, verbose=False):
     Returns:
         robust sigma clipped mean (ndarray).
     """
+    if stat in ('mean', 'median'):
+        np_stat = getattr(np, 'nan{}'.format(stat))
+    else:
+        raise ValueError('stat must be either "mean" or "median".')
+
     if np.iscomplexobj(data):
         if flags is not None:
             flg_count = flags.sum()
@@ -114,11 +110,18 @@ def rsc_mean(data, flags=None, sigma=4.0, axis=0, min_N=4, verbose=False):
             data_im[np.isnan(data.real)] = np.nan
         imag_d, imag_f = sigma_clip(data_im, flags=flags, sigma=sigma, axis=axis, \
                                     min_N=min_N)
-        if verbose:
-            print('{} data points MAD-clipped.'.format(real_f.sum()+imag_f.sum()-flg_count))
-        return np.nanmean(real_d, axis=axis) + 1j * np.nanmean(imag_d, axis=axis)
+        utils.echo('{} data points MAD-clipped.'.format(real_f.sum()+imag_f.sum()-flg_count), \
+                   verbose=verbose)
+        return np_stat(real_d, axis=axis) + 1j * np_stat(imag_d, axis=axis)
 
     else:
-        d = sigma_clip(data, flags=flags, sigma=sigma, axis=axis, min_N=min_N, \
-                       verbose=verbose)
-        return np.nanmean(d, axis=axis)
+        d, f = sigma_clip(data, flags=flags, sigma=sigma, axis=axis, min_N=min_N, \
+                          verbose=verbose)
+        return np_stat(d, axis=axis)
+
+
+rsc_mean = lambda data, flags=None, sigma=4.0, axis=0, min_N=4, verbose=False: \
+    rsc_avg(data, 'mean', flags, sigma, axis, min_N, verbose)
+
+rsc_median = lambda data, flags=None, sigma=4.0, axis=0, min_N=4, verbose=False: \
+    rsc_avg(data, 'median', flags, sigma, axis, min_N, verbose)
