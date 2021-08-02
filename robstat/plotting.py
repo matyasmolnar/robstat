@@ -95,7 +95,7 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
         annot (bool): list of ndarrays to plot.
         fmt (str): string formatting code to use when adding annotations.
         xbase, ybase (int): set a tick on each integer multiple of the base.
-        titles (list): list of strings to set as titles.
+        titles (list): list or list of lists of strings to set as titles.
         figsize (tuple): width, height in inches.
     """
     if isinstance(arrs, np.ndarray):
@@ -106,6 +106,13 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
         next_len = len(next(it))
         if not all([len(l) == next_len for l in it]):
             raise ValueError('arrs must be a list of lists of the same length')
+    else:
+        assert all(isinstance(arr, list) for arr in arrs)
+
+    if not all(isinstance(title, list) for title in titles):
+        top_titles = True
+    else:
+        top_titles = False
 
     width_ratios = np.append(np.ones(len(arrs)), [0.05*len(arrs)])
 
@@ -153,8 +160,12 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
                 ax.set_xticklabels(ax.get_xticklabels(), rotation=0)
                 ax.xaxis.set_major_locator(ticker.MultipleLocator(xbase))
                 ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
-            if titles is not None and row == 0:
-                ax.set_title(titles[col])
+            if titles is not None:
+                if top_titles:
+                    if row == 0:
+                        ax.set_title(titles[col])
+                else:
+                    ax.set_title(titles[col][row])
             if col == 0:
                 ax.yaxis.set_major_locator(ticker.MultipleLocator(ybase))
                 ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
