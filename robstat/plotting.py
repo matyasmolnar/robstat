@@ -44,9 +44,12 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
 
     if vmin is None and vmax is None:
         all_values = np.concatenate(arrs).flatten()
+        vmin = all_values.min()
+        vmax = all_values.max()
         if clip_pctile is not None:
             vmin = np.nanpercentile(all_values, clip_pctile)
             vmax = np.nanpercentile(all_values, 100 - clip_pctile)
+            all_values = np.clip(all_values, vmin, vmax)
         if center is not None:
             abs_values = np.abs(all_values)
             vmax = np.nanmax(abs_values)
@@ -130,13 +133,21 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
 
     if vmin is None and vmax is None:
         all_values = np.concatenate(arrs).flatten()
-        if clip_pctile is not None:
-            vmin = np.nanpercentile(all_values, clip_pctile)
-            vmax = np.nanpercentile(all_values, 100 - clip_pctile)
-        if center is not None:
-            abs_values = np.abs(all_values)
-            vmax = np.nanmax(abs_values)
-            vmin = -vmax
+        if clip_pctile is None and center is None:
+            s_arrs = np.array(arrs)
+            vmin_arr = np.min(s_arrs, axis=(0, 2, 3))
+            vmax_arr = np.max(s_arrs, axis=(0, 2, 3))
+            use_vmm_arr = True
+        else:
+            use_vmm_arr = False
+            if clip_pctile is not None:
+                vmin = np.nanpercentile(all_values, clip_pctile)
+                vmax = np.nanpercentile(all_values, 100 - clip_pctile)
+                all_values = np.clip(all_values, vmin, vmax)
+            if center is not None:
+                abs_values = np.abs(all_values)
+                vmax = np.nanmax(abs_values)
+                vmin = -vmax
 
     if annot and arrs[0][0].size > 50:
         annot = False
@@ -153,6 +164,9 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
                 xticklabels = True
             else:
                 xticklabels = False
+            if use_vmm_arr:
+                vmin = vmin_arr[row]
+                vmax = vmax_arr[row]
             ax = sns.heatmap(a, cmap=cmap, ax=axes[row][col], cbar=False, \
                         vmin=vmin, vmax=vmax, center=center, annot=annot, fmt=fmt, \
                         xticklabels=xticklabels, yticklabels=yticklabels)
