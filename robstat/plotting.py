@@ -80,8 +80,8 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
 
 
 def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None, \
-                 center=None, annot=False, fmt=None, xbase=5, ybase=10, titles=None, \
-                 ylabels=None, figsize=(14, 6)):
+                  center=None, annot=False, fmt=None, xbase=5, ybase=10, titles=None, \
+                  ylabels=None, figsize=(14, 6)):
     """
     Plot a row of heatmaps with shared colour bar.
 
