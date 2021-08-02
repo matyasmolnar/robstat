@@ -5,11 +5,12 @@ import numpy as np
 import seaborn as sns
 from matplotlib import pyplot as plt
 from matplotlib import ticker
+from matplotlib.colors import LinearSegmentedColormap
 
 
 def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None, \
                  center=None, annot=False, fmt=None, xbase=5, ybase=10, titles=None, \
-                 figsize=(14, 6)):
+                 share_cbar=True, cbar_loc=None, figsize=(14, 6)):
     """
     Plot a row of heatmaps with shared colour bar.
 
@@ -24,14 +25,23 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
         fmt (str): string formatting code to use when adding annotations.
         xbase, ybase (int): set a tick on each integer multiple of the base.
         titles (list): list of strings to set as titles.
+        share_cbar (bool): whether to have the same color bar for all plots, located
+        at the right of the row
+        cbar_loc (str): location of colorbar ("top", "bottom"). Only applicable
+        if share_cbar is False.
         figsize (tuple): width, height in inches.
     """
     if isinstance(arrs, np.ndarray):
         arrs = [arrs]
 
-    width_ratios = np.append(np.ones(len(arrs)), [0.05*len(arrs)])
+    if share_cbar:
+        width_ratios = np.append(np.ones(len(arrs)), [0.05*len(arrs)])
+        ncols = len(arrs) + 1
+    else:
+        width_ratios = None
+        ncols = len(arrs)
 
-    fig, axes = plt.subplots(ncols=len(arrs)+1, figsize=figsize, \
+    fig, axes = plt.subplots(ncols=ncols, figsize=figsize, \
                              gridspec_kw = {'width_ratios': width_ratios})
 
     if apply_np_fn is not None:
@@ -42,7 +52,7 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
                     arrs_np[i][np.isnan(arr.real)] = np.nan
         arrs = arrs_np
 
-    if vmin is None and vmax is None:
+    if vmin is None and vmax is None and share_cbar:
         all_values = np.concatenate(arrs).flatten()
         vmin = all_values.min()
         vmax = all_values.max()
@@ -63,11 +73,30 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
     else:
         cmap = sns.cm.rocket_r
 
+    if cbar_loc is not None:
+        cbar_kws = {'use_gridspec': False, 'location': cbar_loc}
+    else:
+        cbar_kws = None
+
+    bool_arrs = [arr.dtype == bool for arr in arrs]
+    if any(bool_arrs):
+        bool_idxs = np.where(bool_arrs)[0]
+
+        bool_colors = ((1.0, 0.0, 0.0), (0.0, 0.0, 1.0))
+        bool_cmap = LinearSegmentedColormap.from_list('Custom', bool_colors, \
+                                                 len(bool_colors))
+    else:
+        bool_idxs = []
+
     yticklabels = True
     for i, arr in enumerate(arrs):
-        ax = sns.heatmap(arr, cmap=cmap, ax=axes[i], cbar=False, \
-                    vmin=vmin, vmax=vmax, center=center, annot=annot, fmt=fmt, \
-                    yticklabels=yticklabels)
+        if i in bool_idxs and not share_cbar:
+            cmap_ = bool_cmap
+        else:
+            cmap_ = cmap
+        ax = sns.heatmap(arr, cmap=cmap_, ax=axes[i], cbar=not share_cbar, \
+            vmin=vmin, vmax=vmax, center=center, annot=annot, fmt=fmt, \
+            yticklabels=yticklabels, cbar_kws=cbar_kws)
         ax.xaxis.set_major_locator(ticker.MultipleLocator(xbase))
         ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
         if titles is not None:
@@ -76,8 +105,14 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
             ax.yaxis.set_major_locator(ticker.MultipleLocator(ybase))
             ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
             yticklabels = False
+        if i in bool_idxs and not share_cbar:
+            # Set the bool colorbar labels
+            colorbar = ax.collections[0].colorbar
+            colorbar.set_ticks([0.25,0.75])
+            colorbar.set_ticklabels(['False', 'True'])
 
-    fig.colorbar(axes[0].collections[0], cax=axes[-1])
+    if share_cbar:
+        fig.colorbar(axes[0].collections[0], cax=axes[-1])
 
     plt.show()
 
