@@ -440,10 +440,11 @@ def mv_normality(data, method='hz', verbose=False):
 
 def install_R_packages():
     """
-    Installs the TukeyRegion and depth R package.
+    Installs the TukeyRegion, depth and MVN R packages.
 
     https://cran.r-project.org/web/packages/TukeyRegion/
     https://cran.r-project.org/web/packages/depth/
+    https://cran.r-project.org/web/packages/MVN/
     """
     import rpy2.robjects.packages as rpackages
     utils = rpackages.importr('utils')
