@@ -405,7 +405,7 @@ def mv_normality(data, method='hz', verbose=False):
 
     Args:
         data (ndarray): n-dimensional data.
-        method (str): MVN test method ('hz', 'mardia', 'royston', 'dh').
+        method (str): MVN test method ('hz', 'royston', 'dh', 'energy').
         verbose (bool): status updates of MVN computation.
 
     Returns:
@@ -419,7 +419,9 @@ def mv_normality(data, method='hz', verbose=False):
         if np.isnan(data).any():
             data, _ = omit_nans(data, None)
 
-        null_res = {'Test': np.nan, 'statistic': np.nan, 'p value': np.nan, \
+        stat_dict = {'hz': 'HZ', 'royston': 'H', 'dh': 'E', 'energy': 'Statistic'}
+
+        null_res = {'Test': np.nan, stat_dict[method]: np.nan, 'p value': np.nan, \
                     'MVN': np.nan}
 
         if data.size == 0:
