@@ -37,9 +37,11 @@ jminimize = minimize
 try:
     pR = True
     import rpy2.robjects.numpy2ri
+    rpy2.robjects.numpy2ri.activate()
     from rpy2.robjects.packages import importr
     TukeyRegion = importr('TukeyRegion')
     depth = importr('depth')
+    MVN = importr('MVN')
     pR = True
 except ImportError:
     pR = False
@@ -177,14 +179,13 @@ def cdist_jax(arr_A, arr_B):
     while scipy.spatial.distance.cdist cannot be (as of yet).
 
     Args:
-        arr_A (ndarray):
-        arr_B (ndarray):
-
+        arr_A (ndarray): data array A.
+        arr_B (ndarray): data array B.
         weights (ndarray): array of weights associated with the values in data.
         init_guess (ndarray): initial guess for the geometric median.
 
     Returns:
-        Euclidean distances between the input arrays (ndarray)
+        Euclidean distances between the input arrays (ndarray).
     """
     return jnp.sqrt(jnp.sum(jnp.square(arr_A - arr_B), axis=1))
 
@@ -198,14 +199,14 @@ def geometric_median(data, weights=None, init_guess=None, tol=1e-3, \
 
     Args:
         data (ndarray): n-dimensional data. Array must be coordinates of ndim = 2,
-        with shape [# data points, n-coordinates]
+        with shape [# data points, n-coordinates].
         weights (ndarray): array of weights associated with the values in data.
         init_guess (ndarray): initial guess for the geometric median. Can specify
         'median' or 'mean' to choose those as starting points.
-        tol (float): tolerance used for minimization
+        tol (float): tolerance used for minimization.
         keep_res (bool): keep result from unsuccesful minimization instead of
-        replacing with nan
-        verbose (bool): status updates of geometric median computation
+        replacing with nan.
+        verbose (bool): status updates of geometric median computation.
 
     Returns:
         Geometric median (ndarray).
@@ -295,7 +296,7 @@ def tukey_median(data, weights=None, verbose=False):
     Args:
         data (ndarray): n-dimensional data.
         weights (ndarray): array of integer weights associated with the values in data.
-        verbose (bool): status updates of tukey median computation
+        verbose (bool): status updates of tukey median computation.
 
     Returns:
         Tukey median (ndarray).
@@ -304,14 +305,13 @@ def tukey_median(data, weights=None, verbose=False):
         print('rpy2 Python-R bridge not installed and/or TukeyRegion R package not installed.')
         return None
     else:
-        rpy2.robjects.numpy2ri.activate()
         stdout = io.StringIO()
 
         # remove rows with nan coordinates
         if np.isnan(data).any():
             data, weights = omit_nans(data, weights)
 
-        null_res = {'depth': np.nan, 'innerPointFound':False, 'barycenter': np.nan}
+        null_res = {'depth': np.nan, 'innerPointFound': False, 'barycenter': np.nan}
 
         if data.size == 0:
             utils.echo('No non-nan input data; Tukey median cannot be returned.', \
@@ -377,7 +377,6 @@ def mv_median(data, method, weights=None, approx=False, eps=1e-8):
         print('rpy2 Python-R bridge not installed and/or depth R package not installed.')
         return None
     else:
-        rpy2.robjects.numpy2ri.activate()
         stdout = io.StringIO()
 
         # remove rows with nan coordinates
@@ -395,6 +394,50 @@ def mv_median(data, method, weights=None, approx=False, eps=1e-8):
         return dict(TR_res.items())
 
 
+def mv_normality(data, method='hz', verbose=False):
+    """
+    Assess multivariate normality using the mvn function from the MVN R package.
+
+    Requires R to be installed, as well as the rpy2 Python-R bridge.
+
+    Full documentation:
+    https://cran.r-project.org/web/packages/MVN/MVN.pdf
+
+    Args:
+        data (ndarray): n-dimensional data.
+        method (str): MVN test method ('hz', 'mardia', 'royston', 'dh').
+        verbose (bool): status updates of MVN computation.
+
+    Returns:
+        Multivariate normality results (dict).
+    """
+    if not pR:
+        print('rpy2 Python-R bridge not installed and/or MVN R package not installed.')
+        return None
+    else:
+        # remove rows with nan coordinates
+        if np.isnan(data).any():
+            data, _ = omit_nans(data, None)
+
+        null_res = {'Test': np.nan, 'statistic': np.nan, 'p value': np.nan, \
+                    'MVN': np.nan}
+
+        if data.size == 0:
+            utils.echo('No non-nan input data; normality test result cannot be returned.', \
+                       verbose=verbose)
+            return null_res
+
+        # separate to matrix if data is is complex
+        if np.iscomplexobj(data):
+            Cdata = True
+            data = utils.decomposeCArray(data)
+        else:
+            Cdata = False
+
+        MVN_res = dict(MVN.mvn(data=data, mvnTest=method).items())['multivariateNormality']
+        return dict(zip(MVN_res.dtype.names, MVN_res.item()))
+
+
 def install_R_packages():
     """
     Installs the TukeyRegion and depth R package.
@@ -407,3 +450,4 @@ def install_R_packages():
     utils.chooseCRANmirror(ind=1)
     utils.install_packages('TukeyRegion')
     utils.install_packages('depth')
+    utils.install_packages('MVN')
