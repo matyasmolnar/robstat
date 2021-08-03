@@ -54,8 +54,8 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
 
     if vmin is None and vmax is None and share_cbar:
         all_values = np.concatenate(arrs).flatten()
-        vmin = all_values.min()
-        vmax = all_values.max()
+        vmin = np.nanmin(all_values)
+        vmax = np.nanmax(all_values)
         if clip_pctile is not None:
             vmin = np.nanpercentile(all_values, clip_pctile)
             vmax = np.nanpercentile(all_values, 100 - clip_pctile)
@@ -170,8 +170,8 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
         all_values = np.concatenate(arrs).flatten()
         if clip_pctile is None and center is None:
             s_arrs = np.array(arrs)
-            vmin_arr = np.min(s_arrs, axis=(0, 2, 3))
-            vmax_arr = np.max(s_arrs, axis=(0, 2, 3))
+            vmin_arr = np.nanmin(s_arrs, axis=(0, 2, 3))
+            vmax_arr = np.nanmax(s_arrs, axis=(0, 2, 3))
             use_vmm_arr = True
         else:
             use_vmm_arr = False
