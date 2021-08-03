@@ -119,7 +119,7 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
 
 def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None, \
                   center=None, annot=False, fmt=None, xbase=5, ybase=10, titles=None, \
-                  ylabels=None, figsize=(14, 6)):
+                  ylabels=None, share_cbar=True, figsize=(14, 6)):
     """
     Plot a row of heatmaps with shared colour bar.
 
@@ -134,6 +134,8 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
         fmt (str): string formatting code to use when adding annotations.
         xbase, ybase (int): set a tick on each integer multiple of the base.
         titles (list): list or list of lists of strings to set as titles.
+        ylabels (list): ylabels for each row.
+        share_cbar (bool): whether to have the same color bar for all plots across rows.
         figsize (tuple): width, height in inches.
     """
     if isinstance(arrs, np.ndarray):
@@ -152,9 +154,14 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
     else:
         top_titles = False
 
-    width_ratios = np.append(np.ones(len(arrs)), [0.05*len(arrs)])
+    if share_cbar:
+        width_ratios = np.append(np.ones(len(arrs)), [0.05*len(arrs)])
+        ncols = len(arrs) + 1
+    else:
+        width_ratios = None
+        ncols = len(arrs)
 
-    fig, axes = plt.subplots(nrows=len(arrs[0]), ncols=len(arrs)+1, figsize=figsize, \
+    fig, axes = plt.subplots(nrows=len(arrs[0]), ncols=ncols, figsize=figsize, \
                              gridspec_kw = {'width_ratios': width_ratios})
 
     if apply_np_fn is not None:
@@ -166,7 +173,7 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
                         arrs_np[i][j][np.isnan(a.real)] = np.nan
         arrs = arrs_np
 
-    if vmin is None and vmax is None:
+    if vmin is None and vmax is None and share_cbar:
         all_values = np.concatenate(arrs).flatten()
         if clip_pctile is None and center is None:
             s_arrs = np.array(arrs)
@@ -183,6 +190,8 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
                 abs_values = np.abs(all_values)
                 vmax = np.nanmax(abs_values)
                 vmin = -vmax
+    else:
+        use_vmm_arr = False
 
     if annot and arrs[0][0].size > 50:
         annot = False
@@ -202,7 +211,7 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
             if use_vmm_arr:
                 vmin = vmin_arr[row]
                 vmax = vmax_arr[row]
-            ax = sns.heatmap(a, cmap=cmap, ax=axes[row][col], cbar=False, \
+            ax = sns.heatmap(a, cmap=cmap, ax=axes[row][col], cbar=not share_cbar, \
                         vmin=vmin, vmax=vmax, center=center, annot=annot, fmt=fmt, \
                         xticklabels=xticklabels, yticklabels=yticklabels)
             if row == len(arr) - 1:
@@ -221,7 +230,7 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
                 yticklabels = False
                 if ylabels is not None:
                     ax.set_ylabel(ylabels[row])
-
-                fig.colorbar(axes[row][0].collections[0], cax=axes[row][-1])
+                if share_cbar:
+                    fig.colorbar(axes[row][0].collections[0], cax=axes[row][-1])
 
     plt.show()
