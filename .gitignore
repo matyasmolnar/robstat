@@ -5,3 +5,4 @@ __pycache__/
 notebooks/local_nb.ipynb
 robstat/data/xd_vis_extd.npz
 robstat/data/xd_vis_all.npz
+R_scripts/
