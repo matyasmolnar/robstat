@@ -6,9 +6,9 @@ import numpy as np
 from . import utils
 
 
-def sigma_clip(data, flags=None, sigma=4.0, axis=0, min_N=4, verbose=False):
+def mad_clip(data, flags=None, sigma=4.0, axis=0, min_N=4, verbose=False):
     """
-    Robust sigma clipping, about the median.
+    Robust median absolute deviation clipping.
 
     This function will directly replace flagged and clipped data in array with
     a np.nan.
@@ -40,7 +40,11 @@ def sigma_clip(data, flags=None, sigma=4.0, axis=0, min_N=4, verbose=False):
     assert not np.iscomplexobj(data) # MAD clipping erroneous if complex
 
     # ensure array passes min_N criteria:
-    if data.shape[axis] < min_N:
+    if isinstance(axis, int):
+        data_N = data.shape[axis]
+    else:
+        data_N = np.prod([ax for i, ax in enumerate(data.shape) if i not in axis])
+    if data_N < min_N:
         utils.echo('No sigma clipping performed as length of array for specified axis ' \
                    '< min_N.', verbose=verbose)
         if flags is None:
@@ -59,12 +63,20 @@ def sigma_clip(data, flags=None, sigma=4.0, axis=0, min_N=4, verbose=False):
 
     # get robust location
     location = np.nanmedian(data, axis=axis)
+    ex_dims = np.ones(data.ndim, dtype=int)
+    if not isinstance(axis, int):
+        for ax in axis:
+            ex_dims[ax] = data.shape[ax]
+    else:
+        ex_dims[axis] = data.shape[axis]
+    tile_loc = np.tile(np.expand_dims(location, axis=axis), ex_dims)
 
     # get MAD! * 1.482579 correction factor
-    scale = np.nanmedian(np.abs(data - location), axis=axis) * 1.482579
+    scale = np.nanmedian(np.abs(data - tile_loc), axis=axis) * 1.482579
+    tile_scale = np.tile(np.expand_dims(scale, axis=axis), ex_dims)
 
     # get clipped data
-    clip = np.abs(data - location) / scale > sigma
+    clip = np.abs(data - tile_loc) / tile_scale > sigma
 
     # set clipped data to nan and set clipped flags to True
     sc_data[clip] *= np.nan
@@ -104,21 +116,21 @@ def rsc_avg(data, stat, flags=None, sigma=4.0, axis=0, min_N=4, verbose=False):
             flg_count = flags.sum()
         else:
             flg_count = 0
-        real_d, real_f = sigma_clip(data.real, flags=flags, sigma=sigma, axis=axis, \
-                                    min_N=min_N)
+        real_d, real_f = mad_clip(data.real, flags=flags, sigma=sigma, axis=axis, \
+                                  min_N=min_N)
         # put nans are in imag part too
         data_im = data.imag
         if np.isnan(data.real).any():
             data_im[np.isnan(data.real)] = np.nan
-        imag_d, imag_f = sigma_clip(data_im, flags=flags, sigma=sigma, axis=axis, \
-                                    min_N=min_N)
+        imag_d, imag_f = mad_clip(data_im, flags=flags, sigma=sigma, axis=axis, \
+                                  min_N=min_N)
         utils.echo('{} data points MAD-clipped.'.format(real_f.sum()+imag_f.sum()-flg_count), \
                    verbose=verbose)
         return np_stat(real_d, axis=axis) + 1j * np_stat(imag_d, axis=axis)
 
     else:
-        d, f = sigma_clip(data, flags=flags, sigma=sigma, axis=axis, min_N=min_N, \
-                          verbose=verbose)
+        d, f = mad_clip(data, flags=flags, sigma=sigma, axis=axis, min_N=min_N, \
+                        verbose=verbose)
         return np_stat(d, axis=axis)
 
 
