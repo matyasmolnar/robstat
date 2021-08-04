@@ -65,6 +65,32 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
             vmax = np.nanmax(abs_values)
             vmin = -vmax
 
+    use_vmm_arr = False
+    if not share_cbar:
+        if clip_pctile is not None:
+            use_vmm_arr = True
+            s_arrs = np.array(arrs)
+            vmin_arr = np.nanpercentile(s_arrs, clip_pctile, axis=(1, 2))
+            vmax_arr = np.nanpercentile(s_arrs, 100 - clip_pctile, axis=(1, 2))
+
+            # revert clipping for boolean arrays
+            b_arr = False
+            b_idxs = []
+            for b_idx, arr in enumerate(arrs):
+                if arr.dtype == bool:
+                    b_idxs.append(b_idx)
+                    b_arr = True
+            if b_arr:
+                vmin_arr[b_idxs] = 0
+                vmax_arr[b_idxs] = 1
+
+        if center is not None:
+            use_vmm_arr = True
+            s_arrs = np.array(arrs)
+            abs_values = np.abs(s_arrs)
+            vmax_arr = np.nanmax(abs_values, axis=(1, 2))
+            vmin_arr = -vmax_arr
+
     if annot and arrs[0].size > 50:
         annot = False
 
@@ -94,6 +120,9 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
             cmap_ = bool_cmap
         else:
             cmap_ = cmap
+        if use_vmm_arr:
+            vmin = vmin_arr[i]
+            vmax = vmax_arr[i]
         ax = sns.heatmap(arr, cmap=cmap_, ax=axes[i], cbar=not share_cbar, \
             vmin=vmin, vmax=vmax, center=center, annot=annot, fmt=fmt, \
             yticklabels=yticklabels, cbar_kws=cbar_kws)
