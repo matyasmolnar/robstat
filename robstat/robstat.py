@@ -400,6 +400,9 @@ def mv_normality(data, method='hz', verbose=False):
 
     Requires R to be installed, as well as the rpy2 Python-R bridge.
 
+    See multivariate_normality from pingouin package for a Python implementation.
+    https://pingouin-stats.org/index.html
+
     Full documentation:
     https://cran.r-project.org/web/packages/MVN/MVN.pdf
 
