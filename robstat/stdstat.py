@@ -58,6 +58,10 @@ def mad_clip(data, flags=None, sigma=4.0, axis=0, min_N=4, verbose=False):
     if flags is not None:
         clip_flags += flags
         sc_data[flags] *= np.nan
+    else:
+        nan_idxs = np.isnan(sc_data)
+        if nan_idxs.any():
+            clip_flags += nan_idxs
 
     flg_count = clip_flags.sum()
 
