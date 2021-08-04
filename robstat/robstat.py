@@ -432,6 +432,11 @@ def mv_normality(data, method='hz', verbose=False):
                        verbose=verbose)
             return null_res
 
+        if data.size <= 7:
+            utils.echo('Sample size must be greater than 7; normality test result '\
+                       'cannot be returned.', verbose=verbose)
+            return null_res
+
         # separate to matrix if data is is complex
         if np.iscomplexobj(data):
             Cdata = True
