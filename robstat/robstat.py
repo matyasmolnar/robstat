@@ -6,6 +6,7 @@ import functools
 from contextlib import redirect_stdout
 
 import numpy as np
+import pandas as pd
 from scipy import stats
 from scipy.optimize import minimize
 from scipy.spatial.distance import cdist
@@ -36,8 +37,8 @@ jminimize = minimize
 # Tukey median package from R
 try:
     pR = True
-    import rpy2.robjects.numpy2ri
-    rpy2.robjects.numpy2ri.activate()
+    from rpy2.robjects import numpy2ri, pandas2ri
+    numpy2ri.activate()
     from rpy2.robjects.packages import importr
     TukeyRegion = importr('TukeyRegion')
     depth = importr('depth')
@@ -354,7 +355,7 @@ def tukey_median(data, weights=None, verbose=False):
 
 def mv_median(data, method, weights=None, approx=False, eps=1e-8):
     """
-    Multivariate median using the 'depth' package in R.
+    Multivariate median using the depth package in R.
 
     Requires R to be installed, as well as the rpy2 Python-R bridge.
 
@@ -444,8 +445,50 @@ def mv_normality(data, method='hz', verbose=False):
         else:
             Cdata = False
 
-        MVN_res = dict(MVN.mvn(data=data, mvnTest=method).items())['multivariateNormality']
+        MVN_res = MVN.mvn(data=data, mvnTest=method).rx2('multivariateNormality')
         return dict(zip(MVN_res.dtype.names, MVN_res.item()))
+
+
+def mv_outlier(data, method='quan', verbose=False):
+    """
+    Robust multivariate outlier detection using robust Mahalanobis distances,
+    using the mvOutlier function from the MVN R package.
+
+    Two approaches are available, one based on Mahalanobis distances ('quan')
+    and adjusted Mahalanobis distance ('adj').
+
+    Requires R to be installed, as well as the rpy2 Python-R bridge.
+
+    Full documentation:
+    https://cran.r-project.org/web/packages/MVN/MVN.pdf
+
+    Args:
+        data (ndarray): n-dimensional data.
+        method (str): outlier detection approach('quan', 'adj').
+        verbose (bool): status updates of outlier computation.
+
+    Returns:
+        Multivariate outlier detection results (dict).
+    """
+    if not pR:
+        print('rpy2 Python-R bridge not installed and/or MVN R package not installed.')
+        return None
+    else:
+        pandas2ri.activate()
+        df = pd.DataFrame(data)
+        df.dropna(axis=0, how='any', inplace=True)
+
+        df = MVN.mvOutlier(df, method=method, qqplot=False).rx2('outlier')
+
+        # reformat cols
+        df.index = pd.to_numeric(df.index)
+        for col in ['Observation', 'Mahalanobis Distance']:
+            df[col] = pd.to_numeric(df[col])
+        df['Outlier'] = df['Outlier'].map({'FALSE': False, 'TRUE': True})
+
+        df.sort_index(inplace=True)
+
+        return df
 
 
 def install_R_packages():
