@@ -39,6 +39,7 @@ try:
     pR = True
     from rpy2.robjects import numpy2ri, pandas2ri
     numpy2ri.activate()
+    pandas2ri.activate()
     from rpy2.robjects.packages import importr
     TukeyRegion = importr('TukeyRegion')
     depth = importr('depth')
@@ -433,20 +434,17 @@ def mv_normality(data, method='hz', verbose=False):
                        verbose=verbose)
             return null_res
 
-        if data.size <= 7:
+        if data.shape[0] <= 7:
             utils.echo('Sample size must be greater than 7; normality test result '\
                        'cannot be returned.', verbose=verbose)
             return null_res
 
         # separate to matrix if data is is complex
         if np.iscomplexobj(data):
-            Cdata = True
             data = utils.decomposeCArray(data)
-        else:
-            Cdata = False
 
         MVN_res = MVN.mvn(data=data, mvnTest=method).rx2('multivariateNormality')
-        return dict(zip(MVN_res.dtype.names, MVN_res.item()))
+        return dict(zip(MVN_res.columns, MVN_res.values[0]))
 
 
 def mv_outlier(data, method='quan', verbose=False):
@@ -474,7 +472,10 @@ def mv_outlier(data, method='quan', verbose=False):
         print('rpy2 Python-R bridge not installed and/or MVN R package not installed.')
         return None
     else:
-        pandas2ri.activate()
+        # separate to matrix if data is is complex
+        if np.iscomplexobj(data):
+            data = utils.decomposeCArray(data)
+
         df = pd.DataFrame(data)
         df.dropna(axis=0, how='any', inplace=True)
 
@@ -485,6 +486,19 @@ def mv_outlier(data, method='quan', verbose=False):
         for col in ['Observation', 'Mahalanobis Distance']:
             df[col] = pd.to_numeric(df[col])
         df['Outlier'] = df['Outlier'].map({'FALSE': False, 'TRUE': True})
+
+        if np.isnan(data).any():
+            # adding back in empty nan rows
+            og_size = data.shape[0]
+            to_in = np.delete(np.arange(og_size), df['Observation'].values)
+
+            nan_arr = np.empty_like(to_in)*np.nan
+            false_arr = np.zeros_like(nan_arr).astype(bool)
+
+            df2 = pd.DataFrame(list(zip(to_in, nan_arr, false_arr)), index=to_in, \
+                               columns=df.columns)
+
+            df = pd.concat((df, df2))
 
         df.sort_index(inplace=True)
 
