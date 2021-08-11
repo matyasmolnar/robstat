@@ -10,7 +10,7 @@ from matplotlib.colors import LinearSegmentedColormap
 
 def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None, \
                  center=None, annot=False, fmt=None, xbase=5, ybase=10, titles=None, \
-                 share_cbar=True, cbar_loc=None, figsize=(14, 6)):
+                 share_cbar=True, cbar_loc=None, cmap=sns.cm.rocket_r, figsize=(14, 6)):
     """
     Plot a row of heatmaps with shared colour bar.
 
@@ -20,7 +20,7 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
         clip_pctile (float): top and bottom percentile of data to clip. No clipping
         if None.
         vmin, vmax (float): values to anchor the colormap. Supersedes clip_pctile.
-        center (float): value at which to center the colormap when plotting divergant data.
+        center (float): value at which to center the colormap when plotting divergent data.
         annot (bool): list of ndarrays to plot.
         fmt (str): string formatting code to use when adding annotations.
         xbase, ybase (int): set a tick on each integer multiple of the base.
@@ -29,6 +29,7 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
         at the right of the row
         cbar_loc (str): location of colorbar ("top", "bottom"). Only applicable
         if share_cbar is False.
+        cmap (str, colormap object): color map for heatmaps.
         figsize (tuple): width, height in inches.
     """
     if isinstance(arrs, np.ndarray):
@@ -94,10 +95,8 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
     if annot and arrs[0].size > 50:
         annot = False
 
-    if apply_np_fn == 'angle' or center == 0:
+    if center == 0:
         cmap = 'bwr'
-    else:
-        cmap = sns.cm.rocket_r
 
     if cbar_loc is not None:
         cbar_kws = {'use_gridspec': False, 'location': cbar_loc}
@@ -148,7 +147,7 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
 
 def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None, \
                   center=None, annot=False, fmt=None, xbase=5, ybase=10, titles=None, \
-                  ylabels=None, share_cbar=True, figsize=(14, 6)):
+                  ylabels=None, share_cbar=True, cmap=sns.cm.rocket_r, figsize=(14, 6)):
     """
     Plot a row of heatmaps with shared colour bar.
 
@@ -158,13 +157,14 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
         clip_pctile (float): top and bottom percentile of data to clip. No clipping
         if None.
         vmin, vmax (float): values to anchor the colormap. Supersedes clip_pctile.
-        center (float): value at which to center the colormap when plotting divergant data.
+        center (float): value at which to center the colormap when plotting divergent data.
         annot (bool): list of ndarrays to plot.
         fmt (str): string formatting code to use when adding annotations.
         xbase, ybase (int): set a tick on each integer multiple of the base.
         titles (list): list or list of lists of strings to set as titles.
         ylabels (list): ylabels for each row.
         share_cbar (bool): whether to have the same color bar for all plots across rows.
+        cmap (str, colormap object): color map for heatmaps.
         figsize (tuple): width, height in inches.
     """
     if isinstance(arrs, np.ndarray):
@@ -222,10 +222,9 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
     if annot and arrs[0][0].size > 50:
         annot = False
 
-    if apply_np_fn == 'angle' or center == 0:
+    if center == 0:
+        # choose divergent color palette
         cmap = 'bwr'
-    else:
-        cmap = sns.cm.rocket_r
 
     yticklabels = True
     for col, arr in enumerate(arrs):
