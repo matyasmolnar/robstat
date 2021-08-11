@@ -447,7 +447,7 @@ def mv_normality(data, method='hz', verbose=False):
         return dict(zip(MVN_res.columns, MVN_res.values[0]))
 
 
-def mv_outlier(data, method='quan', verbose=False):
+def mv_outlier(data, method='quan', chi2_quantile=0.975, verbose=False):
     """
     Robust multivariate outlier detection using robust Mahalanobis distances,
     using the mvOutlier function from the MVN R package.
@@ -463,6 +463,7 @@ def mv_outlier(data, method='quan', verbose=False):
     Args:
         data (ndarray): n-dimensional data.
         method (str): outlier detection approach('quan', 'adj').
+        chi2_quantile (float): chi^2 quantile threshold to declare outliers.
         verbose (bool): status updates of outlier computation.
 
     Returns:
@@ -486,6 +487,12 @@ def mv_outlier(data, method='quan', verbose=False):
         for col in ['Observation', 'Mahalanobis Distance']:
             df[col] = pd.to_numeric(df[col])
         df['Outlier'] = df['Outlier'].map({'FALSE': False, 'TRUE': True})
+
+        if chi2_quantile != 0.975:
+            # MVN.mvOutlier takes the classical 0.975 threshold; need to re-declare
+            # outliers if this threshold is changed
+            chi2_thresh = stats.chi2.ppf(chi2_quantile, data.shape[1])
+            df['Outlier'] = df['Mahalanobis Distance'] > chi2_thresh
 
         if np.isnan(data).any():
             # adding back in empty nan rows
