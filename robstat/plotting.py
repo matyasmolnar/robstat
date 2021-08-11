@@ -10,7 +10,8 @@ from matplotlib.colors import LinearSegmentedColormap
 
 def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None, \
                  center=None, annot=False, fmt=None, xbase=5, ybase=10, titles=None, \
-                 share_cbar=True, cbar_loc=None, cmap=sns.cm.rocket_r, figsize=(14, 6)):
+                 share_cbar=True, cbar_loc=None, cmap=sns.cm.rocket_r, xlabels=None, \
+                 ylabel=None, figsize=(14, 6)):
     """
     Plot a row of heatmaps with shared colour bar.
 
@@ -30,6 +31,8 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
         cbar_loc (str): location of colorbar ("top", "bottom"). Only applicable
         if share_cbar is False.
         cmap (str, colormap object): color map for heatmaps.
+        xlabels (str, list): xlabels for individual heatmaps.
+        ylabel (str): ylabel for heatmap row.
         figsize (tuple): width, height in inches.
     """
     if isinstance(arrs, np.ndarray):
@@ -103,6 +106,9 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
     else:
         cbar_kws = None
 
+    if isinstance(xlabels, str):
+        xlabels = [xlabels for _ in arrs]
+
     bool_arrs = [arr.dtype == bool for arr in arrs]
     if any(bool_arrs):
         bool_idxs = np.where(bool_arrs)[0]
@@ -132,12 +138,15 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
         if i == 0:
             ax.yaxis.set_major_locator(ticker.MultipleLocator(ybase))
             ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
+            ax.set_ylabel(ylabel)
             yticklabels = False
         if i in bool_idxs and not share_cbar:
             # Set the bool colorbar labels
             colorbar = ax.collections[0].colorbar
             colorbar.set_ticks([0.25,0.75])
             colorbar.set_ticklabels(['False', 'True'])
+        if xlabels is not None:
+            ax.set_xlabel(xlabels[i])
 
     if share_cbar:
         fig.colorbar(axes[0].collections[0], cax=axes[-1])
@@ -147,7 +156,8 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
 
 def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None, \
                   center=None, annot=False, fmt=None, xbase=5, ybase=10, titles=None, \
-                  ylabels=None, share_cbar=True, cmap=sns.cm.rocket_r, figsize=(14, 6)):
+                  xlabels=None, ylabels=None, share_cbar=True, cmap=sns.cm.rocket_r, \
+                  figsize=(14, 6)):
     """
     Plot a row of heatmaps with shared colour bar.
 
@@ -162,7 +172,7 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
         fmt (str): string formatting code to use when adding annotations.
         xbase, ybase (int): set a tick on each integer multiple of the base.
         titles (list): list or list of lists of strings to set as titles.
-        ylabels (list): ylabels for each row.
+        xlabels, ylabels (str, list): x/y-labels for each column/row.
         share_cbar (bool): whether to have the same color bar for all plots across rows.
         cmap (str, colormap object): color map for heatmaps.
         figsize (tuple): width, height in inches.
@@ -189,6 +199,12 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
     else:
         width_ratios = None
         ncols = len(arrs)
+
+    if isinstance(xlabels, str):
+        xlabels = [xlabels for _ in arrs]
+
+    if isinstance(ylabels, str):
+        ylabels = [ylabels for _ in arrs[0]]
 
     fig, axes = plt.subplots(nrows=len(arrs[0]), ncols=ncols, figsize=figsize, \
                              gridspec_kw = {'width_ratios': width_ratios})
@@ -243,6 +259,8 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
                 ax.set_xticklabels(ax.get_xticklabels(), rotation=0)
                 ax.xaxis.set_major_locator(ticker.MultipleLocator(xbase))
                 ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
+                if xlabels is not None:
+                    ax.set_xlabel(xlabels[col])
             if titles is not None:
                 if top_titles:
                     if row == 0:
@@ -257,5 +275,7 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
                     ax.set_ylabel(ylabels[row])
                 if share_cbar:
                     fig.colorbar(axes[row][0].collections[0], cax=axes[row][-1])
+                if ylabels is not None:
+                    ax.set_ylabel(ylabels[row])
 
     plt.show()
