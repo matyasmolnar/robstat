@@ -11,7 +11,7 @@ from matplotlib.colors import LinearSegmentedColormap
 def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None, \
                  center=None, annot=False, fmt=None, xbase=5, ybase=10, titles=None, \
                  share_cbar=True, cbar_loc=None, cmap=sns.cm.rocket_r, xlabels=None, \
-                 ylabel=None, figsize=(14, 6)):
+                 ylabel=None, yticklabels=None, figsize=(14, 6)):
     """
     Plot a row of heatmaps with shared colour bar.
 
@@ -33,6 +33,7 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
         cmap (str, colormap object): color map for heatmaps.
         xlabels (str, list): xlabels for individual heatmaps.
         ylabel (str): ylabel for heatmap row.
+        yticklabels (list, ndarray): set labels for y axis.
         figsize (tuple): width, height in inches.
     """
     if isinstance(arrs, np.ndarray):
@@ -119,7 +120,8 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
     else:
         bool_idxs = []
 
-    yticklabels = True
+    yticklabels_on = yticklabels is None
+
     for i, arr in enumerate(arrs):
         if i in bool_idxs and not share_cbar:
             cmap_ = bool_cmap
@@ -130,16 +132,21 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
             vmax = vmax_arr[i]
         ax = sns.heatmap(arr, cmap=cmap_, ax=axes[i], cbar=not share_cbar, \
             vmin=vmin, vmax=vmax, center=center, annot=annot, fmt=fmt, \
-            yticklabels=yticklabels, cbar_kws=cbar_kws)
+            yticklabels=yticklabels_on, cbar_kws=cbar_kws)
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=0)
         ax.xaxis.set_major_locator(ticker.MultipleLocator(xbase))
         ax.xaxis.set_major_formatter(ticker.ScalarFormatter())
         if titles is not None:
             ax.set_title(titles[i])
         if i == 0:
-            ax.yaxis.set_major_locator(ticker.MultipleLocator(ybase))
-            ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
+            if yticklabels is not None:
+                ax.set_yticklabels(yticklabels[::ybase])
+                ax.set_yticks(np.arange(yticklabels.size)[::ybase])
+            else:
+                ax.yaxis.set_major_locator(ticker.MultipleLocator(ybase))
+                ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
             ax.set_ylabel(ylabel)
-            yticklabels = False
+            yticklabels_on = False
         if i in bool_idxs and not share_cbar:
             # Set the bool colorbar labels
             colorbar = ax.collections[0].colorbar
@@ -157,7 +164,7 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
 def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None, \
                   center=None, annot=False, fmt=None, xbase=5, ybase=10, titles=None, \
                   xlabels=None, ylabels=None, share_cbar=True, cmap=sns.cm.rocket_r, \
-                  figsize=(14, 6)):
+                  yticklabels=None, figsize=(14, 6)):
     """
     Plot a row of heatmaps with shared colour bar.
 
@@ -175,6 +182,7 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
         xlabels, ylabels (str, list): x/y-labels for each column/row.
         share_cbar (bool): whether to have the same color bar for all plots across rows.
         cmap (str, colormap object): color map for heatmaps.
+        yticklabels (list, ndarray): set labels for y axis.
         figsize (tuple): width, height in inches.
     """
     if isinstance(arrs, np.ndarray):
@@ -242,7 +250,8 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
         # choose divergent color palette
         cmap = 'bwr'
 
-    yticklabels = True
+    yticklabels_on = yticklabels is None
+
     for col, arr in enumerate(arrs):
         for row, a in enumerate(arr):
             if row == len(arr) - 1:
@@ -254,7 +263,7 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
                 vmax = vmax_arr[row]
             ax = sns.heatmap(a, cmap=cmap, ax=axes[row][col], cbar=not share_cbar, \
                         vmin=vmin, vmax=vmax, center=center, annot=annot, fmt=fmt, \
-                        xticklabels=xticklabels, yticklabels=yticklabels)
+                        xticklabels=xticklabels, yticklabels=yticklabels_on)
             if row == len(arr) - 1:
                 ax.set_xticklabels(ax.get_xticklabels(), rotation=0)
                 ax.xaxis.set_major_locator(ticker.MultipleLocator(xbase))
@@ -268,9 +277,13 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
                 else:
                     ax.set_title(titles[col][row])
             if col == 0:
-                ax.yaxis.set_major_locator(ticker.MultipleLocator(ybase))
-                ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
-                yticklabels = False
+                if yticklabels is not None:
+                    ax.set_yticklabels(yticklabels[::ybase])
+                    ax.set_yticks(np.arange(yticklabels.size)[::ybase])
+                else:
+                    ax.yaxis.set_major_locator(ticker.MultipleLocator(ybase))
+                    ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
+                yticklabels_on = False
                 if ylabels is not None:
                     ax.set_ylabel(ylabels[row])
                 if share_cbar:
