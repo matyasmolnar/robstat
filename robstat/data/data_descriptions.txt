@@ -17,12 +17,12 @@ xd_utils.XDgroup_data from simpleredcal.
 JDs: H1C_IDR2.2 JDs apart from 2458109
 Channels: 600 - 604
 Frequencies: 1.5859e+08 - 1.5898e+08
-Time integrations: first 5 from zen.2458098.43869.HH.uvh5 dataset and those aligned
+Time integrations: first 6 from zen.2458098.43869.HH.uvh5 dataset and those aligned
 in LST with those from the other datasets on the other JDs
-LSTs: 1.3826 - 1.38565
+LSTs: 1.3826 - 1.3865
 Polarization: EE
 Baselines: the short 14m baselines (all orientations, thus making 3 redundant groups)
-Dimensions: (17, 5, 5, 64) = (Days, Frequencies, Times, Baselines)
+Dimensions: (17, 5, 6, 64) = (Days, Frequencies, Times, Baselines)
 
 
 xd_vis_rph.npz:
