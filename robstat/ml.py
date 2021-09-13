@@ -79,15 +79,23 @@ def nan_interp2d(data, kind='cubic', verbose=False):
     nn_data = interpolate.griddata((x1, y1), masked_arr.ravel(),
                                    (xx, yy), method=kind)
 
+    def extrem_nans(nan_data, stepsize=1):
+        nan_idxs = np.where(nan_data)[0]
+        first_idx = 0
+        last_idx = nan_idxs.size - 1
+        gc = np.split(nan_idxs, np.where(np.diff(nan_idxs) != stepsize)[0]+1)
+        for i, grp in enumerate(gc):
+            if (first_idx or last_idx) not in grp:
+                gc.pop(i)
+        return np.array(gc).flatten()
+
     # get rid of nans at extremities
-    nan_idxs = np.where(np.isnan(nn_data))
-    if 0 in nan_idxs[0]:
-        nn_data = nn_data[1:, :]
-    if nn_data.shape[0]-1 in nan_idxs[0]:
-        nn_data = nn_data[:-1, :]
-    if 0 in nan_idxs[1]:
-        nn_data = nn_data[:, 1:]
-    if nn_data.shape[1]-1 in nan_idxs[1]:
-        nn_data = nn_data[:, :-1]
+    nans_t = np.isnan(nn_data).all(axis=0)
+    nans_t_idxs = extrem_nans(nans_t)
+    nn_data = np.delete(nn_data, nans_t_idxs, axis=0)
+
+    nans_f = np.isnan(nn_data).all(axis=1)
+    nans_f_idxs = extrem_nans(nans_f)
+    nn_data = np.delete(nn_data, nans_f_idxs, axis=1)
 
     return nn_data
