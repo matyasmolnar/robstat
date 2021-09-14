@@ -101,7 +101,7 @@ def rsc_avg(data, stat, flags=None, sigma=4.0, axis=0, min_N=4, verbose=False):
         data (ndarray): input data.
         stat (str): statistic to use for averaging ('mean', 'median').
         flags (ndarray): existing boolean flags for data array. True if flagged.
-        sigma (ndarray): sigma threshold to cut above..
+        sigma (ndarray): sigma threshold to cut above.
         axis (int): axis of array to perform mean over.
         min_N (int): minimum length of array to sigma clip, below which no sigma
         clipping is performed.
