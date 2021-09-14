@@ -151,7 +151,7 @@ def mardia_median(angles, weights=None, init_guess=None):
     return res['x'].item()
 
 
-def Cmardia_median(Carr, weights=None, init_guess=None):
+def c_mardia_median(Carr, weights=None, init_guess=None):
     """
     Median estimate of a complex number, with the angle calculated using the Mardia
     median and the absolute value calculated separately using median.
