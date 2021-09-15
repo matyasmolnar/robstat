@@ -484,7 +484,9 @@ def mv_outlier(data, method='quan', chi2_quantile=0.975, verbose=False):
 
         # reformat cols
         df.index = pd.to_numeric(df.index)
-        for col in ['Observation', 'Mahalanobis Distance']:
+        df.rename(columns={'Mahalanobis Distance': 'RS Mahalanobis Distance'}, \
+                  inplace=True)
+        for col in ['Observation', 'RS Mahalanobis Distance']:
             df[col] = pd.to_numeric(df[col])
         df['Outlier'] = df['Outlier'].map({'FALSE': False, 'TRUE': True})
 
@@ -492,7 +494,7 @@ def mv_outlier(data, method='quan', chi2_quantile=0.975, verbose=False):
             # MVN.mvOutlier takes the classical 0.975 threshold; need to re-declare
             # outliers if this threshold is changed
             chi2_thresh = stats.chi2.ppf(chi2_quantile, data.shape[1])
-            df['Outlier'] = df['Mahalanobis Distance'] > chi2_thresh
+            df['Outlier'] = df['RS Mahalanobis Distance'] > chi2_thresh
 
         if np.isnan(data).any():
             # adding back in empty nan rows
