@@ -7,3 +7,4 @@ robstat/data/xd_vis_extd*.npz
 robstat/data/xd_vis_all*.npz
 robstat/data/data_descriptions_extd.txt
 R_scripts/
+figures/
