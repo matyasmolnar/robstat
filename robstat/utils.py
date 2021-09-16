@@ -8,6 +8,7 @@ import numpy as np
 
 
 DATAPATH = os.path.join(Path(__file__).parent.absolute(), 'data')
+FIGSPATH = os.path.join(Path(__file__).parent.absolute().parent.absolute(), 'figures')
 
 
 def echo(message, type=0, verbose=True):
@@ -57,3 +58,6 @@ def round_up(n, decimals=0):
 def round_down(n, decimals=0):
     multiplier = 10 ** decimals
     return np.floor(n * multiplier) / multiplier
+
+
+flt_nan = lambda x: x[~np.isnan(x)]
