@@ -69,7 +69,7 @@ def extrem_nans(nan_data):
     return np.array(gc).flatten()
 
 
-def nan_interp2d(data, kind='cubic', verbose=False):
+def nan_interp2d(data, kind='cubic', rtn_nan_idxs=False, verbose=False):
     """
     If nans are present in the 2D data array, these nan values will be replaced
     with interpolated values. If nans are present at the start or end of the array,
@@ -79,6 +79,8 @@ def nan_interp2d(data, kind='cubic', verbose=False):
         data (ndarray): 2D array with nans.
         kind (str): specifies the kind of interpolation e.g. {"linear", "quadratic",
         "cubic"}.
+        rtn_nan_idxs (bool): return the indices at the extremities of the interpolated
+        array that contain nans and do not delete those indices from the returned array.
         verbose (bool): status updates of interpolation.
 
     Returns:
@@ -103,12 +105,15 @@ def nan_interp2d(data, kind='cubic', verbose=False):
     # get rid of nans at extremities
     nans_t = np.isnan(nn_data).all(axis=0)
     nans_t_idxs = extrem_nans(nans_t)
-    if nans_t_idxs.size != 0:
-        nn_data = np.delete(nn_data, nans_t_idxs, axis=1)
 
     nans_f = np.isnan(nn_data).all(axis=1)
     nans_f_idxs = extrem_nans(nans_f)
-    if nans_f_idxs.size != 0:
-        nn_data = np.delete(nn_data, nans_f_idxs, axis=0)
 
-    return nn_data
+    if rtn_nan_idxs:
+        return nn_data, nans_f_idxs, nans_t_idxs
+    else:
+        if nans_t_idxs.size != 0:
+            nn_data = np.delete(nn_data, nans_t_idxs, axis=1)
+        if nans_f_idxs.size != 0:
+            nn_data = np.delete(nn_data, nans_f_idxs, axis=0)
+        return nn_data
