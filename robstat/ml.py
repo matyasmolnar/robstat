@@ -88,7 +88,10 @@ def nan_interp2d(data, kind='cubic', rtn_nan_idxs=False, verbose=False):
     """
     if not np.isnan(data).any():
         utils.echo('No nan entries in array.', verbose=verbose)
-        return data
+        if rtn_nan_idxs:
+            return data, np.empty(0), np.empty(0)
+        else:
+            return data
 
     # mask invalid values
     masked_arr = np.ma.masked_invalid(data)
