@@ -51,22 +51,23 @@ def nan_interp1d(data, kind='linear', verbose=False):
 def extrem_nans(nan_data):
     """
     For a 1D boolean array that indicates the indices of nan data in an array,
-    remove the extremities if they contains nans.
+    return the contiguous nan indices at the extremities.
 
     Args:
         nan_data (ndarray): 1D boolean array.
 
     Returns:
-        1D array of indices with nan extremities removed.
+        1D array of indices with nans at array extremities.
     """
     nan_idxs = np.where(nan_data)[0]
     first_idx = 0
     last_idx = nan_data.size - 1
     gc = np.split(nan_idxs, np.where(np.diff(nan_idxs) != 1)[0]+1)
+    _gc = []
     for i, grp in enumerate(gc):
-        if (first_idx or last_idx) not in grp:
-            gc.pop(i)
-    return np.array(gc).flatten()
+        if any(i in [first_idx, last_idx] for i in grp):
+            _gc.extend(grp.tolist())
+    return np.array(_gc).flatten()
 
 
 def nan_interp2d(data, kind='cubic', rtn_nan_idxs=False, verbose=False):
