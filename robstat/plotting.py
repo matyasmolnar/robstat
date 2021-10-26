@@ -140,8 +140,8 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
             ax.set_title(titles[i])
         if i == 0:
             if yticklabels is not None:
-                ax.set_yticklabels(yticklabels[::ybase])
                 ax.set_yticks(np.arange(yticklabels.size)[::ybase])
+                ax.set_yticklabels(yticklabels[::ybase])
             else:
                 ax.yaxis.set_major_locator(ticker.MultipleLocator(ybase))
                 ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
@@ -278,8 +278,8 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
                     ax.set_title(titles[col][row])
             if col == 0:
                 if yticklabels is not None:
-                    ax.set_yticklabels(yticklabels[::ybase])
                     ax.set_yticks(np.arange(yticklabels.size)[::ybase])
+                    ax.set_yticklabels(yticklabels[::ybase])
                 else:
                     ax.yaxis.set_major_locator(ticker.MultipleLocator(ybase))
                     ax.yaxis.set_major_formatter(ticker.ScalarFormatter())
@@ -309,7 +309,7 @@ class SeabornFig2Grid():
         self._finalize()
 
     def _movegrid(self):
-        """Move PairGrid or Facetgrid"""
+        '''Move PairGrid or Facetgrid'''
         self._resize()
         n = self.sg.axes.shape[0]
         m = self.sg.axes.shape[1]
@@ -319,7 +319,7 @@ class SeabornFig2Grid():
                 self._moveaxes(self.sg.axes[i,j], self.subgrid[i,j])
 
     def _movejointgrid(self):
-        """Move Jointgrid"""
+        '''Move Jointgrid'''
         h= self.sg.ax_joint.get_position().height
         h2= self.sg.ax_marg_x.get_position().height
         r = int(np.round(h/h2))
@@ -342,7 +342,7 @@ class SeabornFig2Grid():
 
     def _finalize(self):
         plt.close(self.sg.fig)
-        self.fig.canvas.mpl_connect("resize_event", self._resize)
+        self.fig.canvas.mpl_connect('resize_event', self._resize)
         self.fig.canvas.draw()
 
     def _resize(self, evt=None):
