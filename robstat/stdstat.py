@@ -80,7 +80,9 @@ def mad_clip(data, flags=None, sigma=4.0, axis=0, min_N=4, verbose=False):
     tile_scale = np.tile(np.expand_dims(scale, axis=axis), ex_dims)
 
     # get clipped data
+    old_settings = np.seterr(divide='ignore', invalid='ignore')
     clip = np.abs(data - tile_loc) / tile_scale > sigma
+    np.seterr(**old_settings) # reset to default
 
     # set clipped data to nan and set clipped flags to True
     sc_data[clip] *= np.nan
