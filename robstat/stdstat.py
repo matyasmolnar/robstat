@@ -117,14 +117,27 @@ def rsc_avg(data, stat, flags=None, sigma=4.0, axis=0, min_N=4, verbose=False):
     else:
         raise ValueError('stat must be either "mean" or "median".')
 
-    if np.iscomplexobj(data):
+    iscomplex = np.iscomplexobj(data)
+
+    if np.isnan(data).all():
+        utils.echo('All-nan slice encountered - returning nan.', verbose=verbose)
+        if data.ndim == 1:
+            if iscomplex:
+                return np.nan + 1j*np.nan
+            else:
+                return np.nan
+        else:
+            rtn_arr_shape = np.delete(data.shape, axis)
+            return np.empty(rtn_arr_shape, dtype=data.dtype) * np.nan
+
+    if iscomplex:
         if flags is not None:
             flg_count = flags.sum()
         else:
             flg_count = 0
         real_d, real_f = mad_clip(data.real, flags=flags, sigma=sigma, axis=axis, \
                                   min_N=min_N)
-        # put nans are in imag part too
+        # ensure nans are in imag part too
         data_im = data.imag
         if np.isnan(data.real).any():
             data_im[np.isnan(data.real)] = np.nan
