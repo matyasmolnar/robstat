@@ -250,20 +250,14 @@ def geometric_median(data, weights=None, init_guess=None, tol=1e-3, \
 
         Note that parameters initial guess must be a single element ndarray.
         """
-        if weights is None:
-            ed =  eucl_dist(x * np.ones_like(data), data)
-        else:
-            ed =  weights * eucl_dist(x * np.ones_like(data), data)
-
-        # cdist from scipy returns a matrix with every row the same
-        if not pJAX:
-            ed = ed[0, :]
-
+        ed = np.squeeze(eucl_dist(x[np.newaxis, :], data))
+        if weights is not None:
+            ed *= weights
         return ed.sum()
 
     ff = JJ(functools.partial(agg_dist, weights))
 
-    res = jminimize(ff, init_guess, method='bfgs', options={'maxiter':3000}, \
+    res = jminimize(ff, np.array(init_guess, ndmin=1), method='bfgs', options={'maxiter':3000}, \
                     tol=tol)
     if pJAX:
         res = res._asdict()
