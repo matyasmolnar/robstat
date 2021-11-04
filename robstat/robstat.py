@@ -231,7 +231,8 @@ def geometric_median(data, weights=None, init_guess=None, tol=1e-3, \
     # init_guess could be nan if it is reused in a loop
     elif np.isnan(init_guess):
         init_guess = np.zeros(data.shape[1])
-    elif np.iscomplexobj(init_guess):
+
+    if np.iscomplexobj(init_guess):
         init_guess = np.array([init_guess.real, init_guess.imag])
 
     # remove rows with nan coordinates
