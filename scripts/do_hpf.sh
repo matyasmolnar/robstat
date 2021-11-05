@@ -10,7 +10,7 @@
 #PBS -d /lustre/aoc/projects/hera/mmolnar/robstat # Working directory (PBS_O_WORKDIR) set to your Lustre area
 #PBS -m bea # Send email when Jobs end or abort
 #PBS -l nodes=1:ppn=8 # default is 1 core on 1 node
-#PBS -l walltime=24:00:00
+#PBS -l walltime=48:00:00
 #PBS -j oe
 #PBS -o hpf.out
 
