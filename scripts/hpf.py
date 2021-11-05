@@ -11,6 +11,7 @@ from robstat.utils import DATAPATH
 def main():
     # xd_vis_file = 'xd_vis_rph.npz'
     xd_vis_file = 'lstb_no_avg/idr2_lstb_14m_ee_1.40949.npz'
+    mp = True # turn on multiprocessing
 
     xd_vis_file_path = os.path.join(DATAPATH, xd_vis_file)
     hpf_vis_file = os.path.join(DATAPATH, xd_vis_file.replace('.npz', '_hpf.npz'))
@@ -20,21 +21,25 @@ def main():
         # load dataset
         sample_xd_data = np.load(xd_vis_file_path)
 
-        xd_data = sample_xd_data['data'] # dimensions (days, freqs, times, bls)
-        xd_flags = sample_xd_data['flags']
-
+        xd_data = sample_xd_data['data']  # dimensions (days, freqs, times, bls)
         xd_redg = sample_xd_data['redg']
-        xd_times = sample_xd_data['times']
+        xd_rad_lsts = sample_xd_data['lsts']
         xd_pol = sample_xd_data['pol'].item()
         JDs = sample_xd_data['JDs']
+        no_days = JDs.size
 
-        freqs = sample_xd_data['freqs']
-        chans = sample_xd_data['chans']
+        if 'lstb_no_avg' in xd_vis_file:
+            xd_flags = np.isnan(xd_data)
+            freqs = np.linspace(1e8, 2e8, 1025)[:-1]
+            no_chans = freqs.size
+        else:
+            xd_flags = sample_xd_data['flags']
+            freqs = sample_xd_data['freqs']
+            chans = sample_xd_data['chans']
+            no_chans = chans.size
 
         f_resolution = np.median(np.ediff1d(freqs))
-        no_chans = chans.size
-        no_days = JDs.size
-        no_tints = xd_times.size
+        no_tints = xd_rad_lsts.size
         no_bls = xd_data.shape[3]
 
 
@@ -62,8 +67,15 @@ def main():
 
             return  hpf_data_d[..., np.newaxis]
 
-        m_pool = multiprocessing.Pool(min(multiprocessing.cpu_count(), no_bls))
-        hpf_data = np.concatenate(m_pool.map(bl_iter, range(no_bls)), axis=3)
+        if mp:
+            m_pool = multiprocessing.Pool(min(multiprocessing.cpu_count(), no_bls))
+            pool_res = m_pool.map(bl_iter, range(no_bls))
+            m_pool.close()
+            m_pool.join()
+        else:
+            pool_res = list(map(bl_iter, range(no_bls)))
+        
+        hpf_data = np.concatenate(pool_res, axis=3)
 
 
         # save results
