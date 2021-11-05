@@ -12,3 +12,4 @@ robstat/data/data_descriptions_extd.txt
 R_scripts/
 figures/
 robstat/data/loc_res*/
+*.out
