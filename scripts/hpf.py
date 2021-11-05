@@ -5,6 +5,7 @@ import numpy as np
 
 import uvtools
 
+from robstat.ml import extrem_nans
 from robstat.utils import DATAPATH
 
 
@@ -26,7 +27,7 @@ def main():
         xd_rad_lsts = sample_xd_data['lsts']
         xd_pol = sample_xd_data['pol'].item()
         JDs = sample_xd_data['JDs']
-        no_days = JDs.size
+        no_days = xd_data.shape[0]
 
         if 'lstb_no_avg' in xd_vis_file:
             xd_flags = np.isnan(xd_data)
@@ -57,11 +58,25 @@ def main():
                 if flgs.all():
                     d_res_d = np.empty_like(data) * np.nan
                 else:
-                    wgts = np.logical_not(flgs).astype(float)
+                    ex_nans = extrem_nans(np.isnan(data).all(axis=1))
+                    s_idxs, e_idxs = np.split(ex_nans, np.where(np.ediff1d(ex_nans) > 1)[0]+1)
+                    s = s_idxs.max() + 1
+                    e = e_idxs.min()                    
+                    
+                    data_tr = data[s:e, :].copy()
+                    flgs_tr = flgs[s:e, :]
+                    data_tr[flgs_tr] = 0. # needed for fourier_filter to work properly
+                    wgts = np.logical_not(flgs_tr).astype(float)
+                    freqs_tr = freqs[s:e]
 
-                    _, d_res_d, _ = uvtools.dspec.fourier_filter(freqs, data, wgts, filter_centers, \
+                    _, d_res_tr, info = uvtools.dspec.fourier_filter(freqs_tr, data_tr, wgts, filter_centers,
                         filter_half_widths, mode, filter_dims=0, skip_wgt=0., zero_residual_flags=True, \
-                        max_contiguous_edge_flags=500)
+                        max_contiguous_edge_flags=data_tr.shape[0])
+
+                    d_res_tr[flgs_tr] *= np.nan
+
+                    d_res_d = np.empty_like(data)*np.nan
+                    d_res_d[s:e, :] = d_res_tr
 
                 hpf_data_d[day, ...] = d_res_d
 
@@ -83,9 +98,12 @@ def main():
 
         keys = list(sample_xd_data.keys())
         keys.remove('data')
-        keys.remove('antpos')
+        antpos_in = 'antpos' in keys
+        if antpos_in:
+            keys.remove('antpos')
         metadata = {k: sample_xd_data[k] for k in keys}
-        metadata['antpos'] = np.load(xd_vis_file_path, allow_pickle=True)['antpos'].item()
+        if antpos_in:
+            metadata['antpos'] = np.load(xd_vis_file_path, allow_pickle=True)['antpos'].item()
 
         np.savez(hpf_vis_file, data=hpf_data, **metadata)
         print('HPF visibility file saved to: {}'.format(hpf_vis_file))
