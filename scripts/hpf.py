@@ -12,7 +12,7 @@ from robstat.utils import DATAPATH
 def main():
     # xd_vis_file = 'xd_vis_rph.npz'
     xd_vis_file = 'lstb_no_avg/idr2_lstb_14m_ee_1.40949.npz'
-    mp = True # turn on multiprocessing
+    mp = False # turn on multiprocessing
 
     xd_vis_file_path = os.path.join(DATAPATH, xd_vis_file)
     hpf_vis_file = os.path.join(DATAPATH, xd_vis_file.replace('.npz', '_hpf.npz'))
@@ -55,32 +55,89 @@ def main():
                 data = xd_data[day, ..., bl]
                 flgs = xd_flags[day, ..., bl]
 
-                if flgs.all():
-                    d_res_d = np.empty_like(data) * np.nan
-                else:
+                d_res_d = np.empty_like(data)
+                d_res_d.fill(np.nan + 1j*np.nan)
+
+                if not flgs.all():
+                    # flagged channels
                     ex_nans = extrem_nans(np.isnan(data).all(axis=1))
-                    s_idxs, e_idxs = np.split(ex_nans, np.where(np.ediff1d(ex_nans) > 1)[0]+1)
-                    s = s_idxs.max() + 1
-                    e = e_idxs.min()                    
-                    
-                    data_tr = data[s:e, :].copy()
-                    flgs_tr = flgs[s:e, :]
+                    if ex_nans.size == 0:
+                        s = 0
+                        e = data.shape[0] - 1
+                    else:
+                        # if only one edge has flags
+                        if (np.ediff1d(ex_nans) == 1).all():
+                            if 0 in ex_nans:
+                                s = ex_nans.max() + 1
+                                e = data.shape[0] - 1
+                            else:
+                                s = 0
+                                e = ex_nans.min()
+                        else:
+                            s_idxs, e_idxs = np.split(ex_nans, np.where(np.ediff1d(ex_nans) > 1)[0]+1)
+                            s = s_idxs.max() + 1
+                            e = e_idxs.min()
+
+                    # flagged tints
+                    isnan_tints = np.isnan(data).all(axis=0)
+                    nnan_tints = np.logical_not(isnan_tints).nonzero()[0]
+
+                    data_tr = data[s:e, nnan_tints].copy()
+                    flgs_tr = flgs[s:e, nnan_tints]
                     data_tr[flgs_tr] = 0. # needed for fourier_filter to work properly
                     wgts = np.logical_not(flgs_tr).astype(float)
                     freqs_tr = freqs[s:e]
 
-                    _, d_res_tr, info = uvtools.dspec.fourier_filter(freqs_tr, data_tr, wgts, filter_centers,
-                        filter_half_widths, mode, filter_dims=0, skip_wgt=0., zero_residual_flags=True, \
-                        max_contiguous_edge_flags=data_tr.shape[0])
+                    try:
+                        _, d_res_tr, info = uvtools.dspec.fourier_filter(freqs_tr, data_tr, wgts, filter_centers,
+                            filter_half_widths, mode, filter_dims=0, skip_wgt=0., zero_residual_flags=True, \
+                            max_contiguous_edge_flags=data_tr.shape[0])
+
+                    except ValueError:
+                        # sometimes ValueError: On entry to DLASCL parameter number 4 had an illegal value is raised
+                        # this occurs when the band edges need more trimming
+
+                        d_res_tr = np.empty_like(data_tr)
+                        for tint in range(data_tr.shape[1]):
+                            data_t = data_tr[:, tint]
+                            flgs_t = flgs_tr[:, tint]
+                            # flagged channels
+                            ex_nans = extrem_nans(np.isnan(data_t))
+                            if ex_nans.size == 0:
+                                s_t = 0
+                                e_t = data_t.size - 1
+                            else:
+                                # if only one edge has flags
+                                if (np.ediff1d(ex_nans) == 1).all():
+                                    if 0 in ex_nans:
+                                        s_t = ex_nans.max() + 1
+                                        e_t = data_t.size - 1
+                                    else:
+                                        s_t = 0
+                                        e_t = ex_nans.min()
+                                else:
+                                    s_idxs, e_idxs = np.split(ex_nans, np.where(np.ediff1d(ex_nans) > 1)[0]+1)
+                                    s_t = s_idxs.max() + 1
+                                    e_t = e_idxs.min()
+
+                            data_t_tr = data_t[s_t:e_t].copy()
+                            flgs_t_tr = flgs_t[s_t:e_t]
+                            wgts = np.logical_not(flgs_t_tr).astype(float)
+                            freqs_t_tr = freqs_tr[s_t:e_t]
+
+                            _, d_res_tr_t, info = uvtools.dspec.fourier_filter(freqs_t_tr, data_t_tr, wgts, filter_centers,
+                                filter_half_widths, mode, filter_dims=1, skip_wgt=0., zero_residual_flags=True, \
+                                max_contiguous_edge_flags=data_t_tr.size)
+
+                            d_res_tr[s_t:e_t, tint] = d_res_tr_t
 
                     d_res_tr[flgs_tr] *= np.nan
 
-                    d_res_d = np.empty_like(data)*np.nan
-                    d_res_d[s:e, :] = d_res_tr
+                    d_res_d[s:e, nnan_tints] = d_res_tr
 
                 hpf_data_d[day, ...] = d_res_d
 
-            return  hpf_data_d[..., np.newaxis]
+            return hpf_data_d[..., np.newaxis]
 
         if mp:
             m_pool = multiprocessing.Pool(min(multiprocessing.cpu_count(), no_bls))
@@ -89,7 +146,7 @@ def main():
             m_pool.join()
         else:
             pool_res = list(map(bl_iter, range(no_bls)))
-        
+
         hpf_data = np.concatenate(pool_res, axis=3)
 
 
