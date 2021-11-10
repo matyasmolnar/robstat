@@ -9,6 +9,26 @@ from robstat.ml import extrem_nans
 from robstat.utils import DATAPATH
 
 
+def s_e_idxs(ex_nans, arr_size):
+    if ex_nans.size == 0:
+        start = 0
+        end = arr_size
+    else:
+        # if only one edge has flags
+        if (np.ediff1d(ex_nans) == 1).all():
+            if 0 in ex_nans:
+                start = ex_nans.max() + 1
+                end = arr_size
+            else:
+                start = 0
+                end = ex_nans.min()
+        else:
+            s_idxs, e_idxs = np.split(ex_nans, np.where(np.ediff1d(ex_nans) > 1)[0]+1)
+            start = s_idxs.max() + 1
+            end = e_idxs.min()
+    return start, end
+
+
 def main():
     # xd_vis_file = 'xd_vis_rph.npz'
     xd_vis_file = 'lstb_no_avg/idr2_lstb_14m_ee_1.40949.npz'
@@ -49,6 +69,8 @@ def main():
         filter_half_widths = [1e-6] # half-width of rectangular fourier regions to filter
         mode = 'dayenu_dpss_leastsq'
 
+        skipped_slices = []
+
         def bl_iter(bl):
             hpf_data_d = np.empty((no_days, no_chans, no_tints), dtype=complex)
             for day in range(no_days):
@@ -60,23 +82,8 @@ def main():
 
                 if not flgs.all():
                     # flagged channels
-                    ex_nans = extrem_nans(np.isnan(data).all(axis=1))
-                    if ex_nans.size == 0:
-                        s = 0
-                        e = data.shape[0] - 1
-                    else:
-                        # if only one edge has flags
-                        if (np.ediff1d(ex_nans) == 1).all():
-                            if 0 in ex_nans:
-                                s = ex_nans.max() + 1
-                                e = data.shape[0] - 1
-                            else:
-                                s = 0
-                                e = ex_nans.min()
-                        else:
-                            s_idxs, e_idxs = np.split(ex_nans, np.where(np.ediff1d(ex_nans) > 1)[0]+1)
-                            s = s_idxs.max() + 1
-                            e = e_idxs.min()
+                    ex_nans = extrem_nans(flgs.all(axis=1))
+                    s, e = s_e_idxs(ex_nans, data.shape[0])
 
                     # flagged tints
                     isnan_tints = np.isnan(data).all(axis=0)
@@ -93,34 +100,57 @@ def main():
                             filter_half_widths, mode, filter_dims=0, skip_wgt=0., zero_residual_flags=True, \
                             max_contiguous_edge_flags=data_tr.shape[0])
 
+                        status_dict = info['status']['axis_0']
+                        if 'skipped' in status_dict.values():
+                            skipped_tints = list({k: v for k, v in status_dict.items() if v == 'skipped'}.keys())
+                            print('Re-filtering tints {} for day/bl slice {}, {} as it was skipped when filtering '\
+                                  'the 2D array'.format(nnan_tints[skipped_tints], day, bl))
+
+                            for tint in skipped_tints:
+                                # flagged channels
+                                data_t = data_tr[:, tint]
+                                flgs_t = flgs_tr[:, tint]
+
+                                d_res_t = np.empty_like(data_t)
+                                d_res_t.fill(np.nan + 1j*np.nan)
+
+                                ex_nans = extrem_nans(flgs_t)
+                                s_t, e_t = s_e_idxs(ex_nans, data_t.size)
+
+                                data_t_tr = data_t[s_t:e_t]
+                                flgs_t_tr = flgs_t[s_t:e_t]
+                                wgts = np.logical_not(flgs_t_tr).astype(float)
+                                freqs_t_tr = freqs_tr[s_t:e_t]
+
+                                _, d_res_tr_t, info = uvtools.dspec.fourier_filter(freqs_t_tr, data_t_tr, wgts, filter_centers,
+                                    filter_half_widths, mode, filter_dims=1, skip_wgt=0., zero_residual_flags=True, \
+                                    max_contiguous_edge_flags=data_t_tr.size)
+
+                                d_res_t[s_t:e_t] = d_res_tr_t
+                                d_res_tr[:, tint] = d_res_t
+
+                                if info['info_deconv']['status']['axis_1'][0] == 'skipped' or info['status']['axis_1'][0] == 'skipped':
+                                    skipped_slices.append((day, nnan_tints[tint], bl))
+                                    d_res_tr[:, tint] *= np.nan
+                                    print('Filter for tint {} for day/bl slice {}, {} failed'.\
+                                          format(nnan_tints[tint], day, bl))
+
                     except ValueError:
                         # sometimes ValueError: On entry to DLASCL parameter number 4 had an illegal value is raised
                         # this occurs when the band edges need more trimming
 
                         d_res_tr = np.empty_like(data_tr)
+                        d_res_tr.fill(np.nan + 1j*np.nan)
+
                         for tint in range(data_tr.shape[1]):
                             data_t = data_tr[:, tint]
                             flgs_t = flgs_tr[:, tint]
-                            # flagged channels
-                            ex_nans = extrem_nans(np.isnan(data_t))
-                            if ex_nans.size == 0:
-                                s_t = 0
-                                e_t = data_t.size - 1
-                            else:
-                                # if only one edge has flags
-                                if (np.ediff1d(ex_nans) == 1).all():
-                                    if 0 in ex_nans:
-                                        s_t = ex_nans.max() + 1
-                                        e_t = data_t.size - 1
-                                    else:
-                                        s_t = 0
-                                        e_t = ex_nans.min()
-                                else:
-                                    s_idxs, e_idxs = np.split(ex_nans, np.where(np.ediff1d(ex_nans) > 1)[0]+1)
-                                    s_t = s_idxs.max() + 1
-                                    e_t = e_idxs.min()
 
-                            data_t_tr = data_t[s_t:e_t].copy()
+                            # flagged channels
+                            ex_nans = extrem_nans(flgs_t)
+                            s_t, e_t = s_e_idxs(ex_nans, data_t.size)
+
+                            data_t_tr = data_t[s_t:e_t]
                             flgs_t_tr = flgs_t[s_t:e_t]
                             wgts = np.logical_not(flgs_t_tr).astype(float)
                             freqs_t_tr = freqs_tr[s_t:e_t]
@@ -129,11 +159,21 @@ def main():
                                 filter_half_widths, mode, filter_dims=1, skip_wgt=0., zero_residual_flags=True, \
                                 max_contiguous_edge_flags=data_t_tr.size)
 
+                            if info['info_deconv']['status']['axis_1'][0] == 'skipped' or info['status']['axis_1'][0] == 'skipped':
+                                skipped_slices.append((day, tint, bl))
+                                d_res_tr_t *= np.nan
+                                print('Filter for tint {} for day/bl slice {}, {} failed'.\
+                                        format(tint, day, bl))
+                                
                             d_res_tr[s_t:e_t, tint] = d_res_tr_t
+                            
 
                     d_res_tr[flgs_tr] *= np.nan
 
                     d_res_d[s:e, nnan_tints] = d_res_tr
+
+                # print('day/bl slice {}, {} done'.format(day, bl))
+                # assert (np.isnan(d_res_d) == np.isnan(data)).all()
 
                 hpf_data_d[day, ...] = d_res_d
 
@@ -162,7 +202,7 @@ def main():
         if antpos_in:
             metadata['antpos'] = np.load(xd_vis_file_path, allow_pickle=True)['antpos'].item()
 
-        np.savez(hpf_vis_file, data=hpf_data, **metadata)
+        np.savez(hpf_vis_file, data=hpf_data, skipped=skipped_slices, **metadata)
         print('HPF visibility file saved to: {}'.format(hpf_vis_file))
 
 
