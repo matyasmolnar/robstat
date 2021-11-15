@@ -56,14 +56,13 @@ def main():
 
     in_dir = args.in_dir
     out_dir = args.out_dir
-    for _dir in (in_dir, out_dir):
-        if not os.path.exists(_dir):
-            path = Path(_dir)
-            path.mkdir(parents=True)
-
-    xd_vis_file_path = os.path.join(in_dir, xd_vis_file)
     if out_dir is None:
         out_dir = in_dir
+    if not os.path.exists(out_dir):
+        path = Path(out_dir)
+        path.mkdir(parents=True)
+
+    xd_vis_file_path = os.path.join(in_dir, xd_vis_file)
     hpf_vis_file = os.path.join(out_dir, xd_vis_file.replace('.npz', '_hpf.npz'))
     
     mp = args.multi_proc
@@ -238,6 +237,8 @@ def main():
         np.savez(hpf_vis_file, data=hpf_data, skipped=skipped_slices,
                  filter_half_widths=filter_half_widths, **metadata)
         print('HPF visibility file saved to: {}'.format(hpf_vis_file))
+
+    print('HPF visibility file already exists at: {}'.format(hpf_vis_file))
 
 
 if __name__ == '__main__':
