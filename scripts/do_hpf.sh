@@ -21,7 +21,6 @@ conda activate robstat
 date
 
 cd /lustre/aoc/projects/hera/mmolnar/robstat
-
-python /lustre/aoc/projects/hera/mmolnar/robstat/scripts/hpf.py
+python /lustre/aoc/projects/hera/mmolnar/robstat/scripts/hpf.py lstb_no_avg/idr2_lstb_14m_ee_1.40949.npz
 
 date
