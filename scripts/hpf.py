@@ -1,5 +1,8 @@
+import argparse
 import multiprocess as multiprocessing
 import os
+import textwrap
+from pathlib import Path
 
 import numpy as np
 
@@ -30,12 +33,40 @@ def s_e_idxs(ex_nans, arr_size):
 
 
 def main():
-    # xd_vis_file = 'xd_vis_rph.npz'
-    xd_vis_file = 'lstb_no_avg/idr2_lstb_14m_ee_1.40949.npz'
-    mp = False # turn on multiprocessing
+    parser = argparse.ArgumentParser(formatter_class=argparse.\
+    RawDescriptionHelpFormatter, description=textwrap.dedent(
+    """High pass filtering of visibilities
 
-    xd_vis_file_path = os.path.join(DATAPATH, xd_vis_file)
-    hpf_vis_file = os.path.join(DATAPATH, xd_vis_file.replace('.npz', '_hpf.npz'))
+    Takes a given HERA visibility array with dimensions
+    [days, channels, times, baselines] and performs a high pass filter
+    along the channels axis using the DAYENU - see
+    https://ui.adsabs.harvard.edu/abs/2021MNRAS.500.5195E/abstract
+    """))
+    parser.add_argument('vis_file', help='Visibility file to filter', metavar='V', type=str)
+    parser.add_argument('-i', '--in_dir', required=False, default=DATAPATH,
+                        metavar='I', type=str, help='Directory in which input visibility file lives')
+    parser.add_argument('-o', '--out_dir', required=False, default=None,
+                        metavar='O', type=str, help='Directory in which to save filtered visibilities')
+    parser.add_argument('-m', '--multi_proc', required=False, default=False,
+                        metavar='M', type=bool, help='Whether to employ multiprocessing across day \
+                        baseline slices')
+    args = parser.parse_args()
+
+    xd_vis_file = args.vis_file
+
+    in_dir = args.in_dir
+    out_dir = args.out_dir
+    for _dir in (in_dir, out_dir):
+        if not os.path.exists(_dir):
+            path = Path(_dir)
+            path.mkdir(parents=True)
+
+    xd_vis_file_path = os.path.join(in_dir, xd_vis_file)
+    if out_dir is None:
+        out_dir = in_dir
+    hpf_vis_file = os.path.join(out_dir, xd_vis_file.replace('.npz', '_hpf.npz'))
+    
+    mp = args.multi_proc
 
     if not os.path.exists(hpf_vis_file):
 
@@ -66,7 +97,7 @@ def main():
 
         # HPF with DAYENU
         filter_centers = [0.] # center of rectangular fourier regions to filter
-        filter_half_widths = [1e-6] # half-width of rectangular fourier regions to filter
+        filter_half_widths = [1.5e-6] # half-width of rectangular fourier regions to filter
         mode = 'dayenu_dpss_leastsq'
 
         skipped_slices = []
@@ -86,7 +117,7 @@ def main():
                     s, e = s_e_idxs(ex_nans, data.shape[0])
 
                     # flagged tints
-                    isnan_tints = np.isnan(data).all(axis=0)
+                    isnan_tints = flgs.all(axis=0)
                     nnan_tints = np.logical_not(isnan_tints).nonzero()[0]
 
                     data_tr = data[s:e, nnan_tints].copy()
@@ -138,6 +169,8 @@ def main():
                     except ValueError:
                         # sometimes ValueError: On entry to DLASCL parameter number 4 had an illegal value is raised
                         # this occurs when the band edges need more trimming
+
+                        print('Manually iterating through tints for day/bl slice {}, {}'.format(day, bl))
 
                         d_res_tr = np.empty_like(data_tr)
                         d_res_tr.fill(np.nan + 1j*np.nan)
@@ -202,7 +235,8 @@ def main():
         if antpos_in:
             metadata['antpos'] = np.load(xd_vis_file_path, allow_pickle=True)['antpos'].item()
 
-        np.savez(hpf_vis_file, data=hpf_data, skipped=skipped_slices, **metadata)
+        np.savez(hpf_vis_file, data=hpf_data, skipped=skipped_slices,
+                 filter_half_widths=filter_half_widths, **metadata)
         print('HPF visibility file saved to: {}'.format(hpf_vis_file))
 
 
