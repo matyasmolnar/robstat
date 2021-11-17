@@ -299,6 +299,11 @@ def geometric_median(data, weights=None, init_guess=None, \
         while iters < opts['maxiter']:
             distances = ff(guess)
 
+            # catch divide by zero
+            # look at modified Weiszfeld algorithm here:
+            # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC26449/pdf/pq001423.pdf
+            distances = np.where(distances == 0, 1, distances)
+
             guess_next = (data.T/distances).sum(axis=1) / (1./distances).sum()
             guess_movement = np.sqrt(((guess - guess_next)**2).sum())
             guess = guess_next
