@@ -204,12 +204,12 @@ def geometric_median(data, weights=None, init_guess=None, \
         with shape [# data points, n-coordinates].
         weights (ndarray): array of weights associated with the values in data.
         init_guess (ndarray): initial guess for the geometric median. Can specify
-        'median' or 'mean' to choose those as starting points.
+        "median" or "mean" to choose those as starting points.
         method (str): method to use for computation - {"minimize", "weiszfeld"}
         options (dict): options for method used. possible kwargs:
             tol (float): tolerance used for minimization.
             maxiter (int): maximum number of iterations.
-            min_method (str): minimization method
+            min_method (str): minimization method.
             keep_res (bool): keep result from unsuccesful minimization instead of
             replacing with nan.
         verbose (bool): status updates of geometric median computation.
