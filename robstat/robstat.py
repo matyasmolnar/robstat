@@ -192,8 +192,8 @@ def cdist_jax(arr_A, arr_B):
     return jnp.sqrt(jnp.sum(jnp.square(arr_A - arr_B), axis=1))
 
 
-def geometric_median(data, weights=None, init_guess=None, tol=1e-3, \
-                     keep_res=False, verbose=False):
+def geometric_median(data, weights=None, init_guess=None, \
+                     method='minimize', options={}, verbose=False):
     """
     Geometric median. Also known as the L1-median.
 
@@ -205,9 +205,13 @@ def geometric_median(data, weights=None, init_guess=None, tol=1e-3, \
         weights (ndarray): array of weights associated with the values in data.
         init_guess (ndarray): initial guess for the geometric median. Can specify
         'median' or 'mean' to choose those as starting points.
-        tol (float): tolerance used for minimization.
-        keep_res (bool): keep result from unsuccesful minimization instead of
-        replacing with nan.
+        method (str): method to use for computation - {"minimize", "weiszfeld"}
+        options (dict): options for method used. possible kwargs:
+            tol (float): tolerance used for minimization.
+            maxiter (int): maximum number of iterations.
+            min_method (str): minimization method
+            keep_res (bool): keep result from unsuccesful minimization instead of
+            replacing with nan.
         verbose (bool): status updates of geometric median computation.
 
     Returns:
@@ -254,29 +258,60 @@ def geometric_median(data, weights=None, init_guess=None, tol=1e-3, \
         ed = np.squeeze(eucl_dist(x[np.newaxis, :], data))
         if weights is not None:
             ed *= weights
-        return ed.sum()
+        return ed
 
     ff = JJ(functools.partial(agg_dist, weights))
 
-    res = jminimize(ff, np.array(init_guess, ndmin=1), method='bfgs', options={'maxiter':3000}, \
-                    tol=tol)
-    if pJAX:
-        res = res._asdict()
-        success = res['success'].item()
-        utils.echo(res['status'], verbose=verbose)
-    else:
-        success = res['success']
-        utils.echo(res['message'], verbose=verbose)
+    if method == 'minimize':
+        # Solve as a convex optimization problem
+        default_options = {'maxiter': 3000, 'tol': 1e-3, 'keep_res':False, \
+                           'min_method': 'bfgs'}
+        default_options.update(options)
+        opts = default_options
+
+        ffs = lambda x: ff(x).sum()
+        res = jminimize(ffs, np.array(init_guess, ndmin=1), method=opts['min_method'], \
+                        options={'maxiter':opts['maxiter']}, tol=opts['tol'])
+
+        if pJAX:
+            res = res._asdict()
+            success = res['success'].item()
+            utils.echo(res['status'], verbose=verbose)
+        else:
+            success = res['success']
+            utils.echo(res['message'], verbose=verbose)
+
+        if not success and not opts['keep_res']:
+            utils.echo('Minimization unsuccesful - nan returned', \
+                       verbose=verbose)
+            return np.nan
+        else:
+            resx = res['x']
+
+    elif method == 'weiszfeld':
+        # Weiszfeld's algorithm of iteratively re-weighted least squares
+        default_options = {'maxiter': 1000, 'tol': 1e-7}
+        default_options.update(options)
+        opts = default_options
+
+        iters = 0
+        guess = init_guess
+        while iters < opts['maxiter']:
+            distances = ff(guess)
+
+            guess_next = (data.T/distances).sum(axis=1) / (1./distances).sum()
+            guess_movement = np.sqrt(((guess - guess_next)**2).sum())
+            guess = guess_next
+
+            if guess_movement <= opts['tol']:
+                break
+
+            iters += 1
+
+        resx = guess
 
     if Cdata:
-        resx = res['x'][0] + res['x'][1]*1j
-    else:
-        resx = res['x']
-
-    if not success and not keep_res:
-        utils.echo('Minimization unsuccesful - nan returned', \
-                   verbose=verbose)
-        resx = np.nan
+        resx = resx[0] + 1j*resx[1]
 
     return resx
 
