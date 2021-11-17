@@ -310,6 +310,10 @@ def geometric_median(data, weights=None, init_guess=None, \
 
         resx = guess
 
+    else:
+        raise ValueError('specify valid method: must be either "minimize" or '\
+                         '"weiszfeld".')
+
     if Cdata:
         resx = resx[0] + 1j*resx[1]
 
