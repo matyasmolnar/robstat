@@ -290,6 +290,9 @@ def geometric_median(data, weights=None, init_guess=None, \
             resx = res['x']
 
     elif 'weiszfeld' in method:
+        default_options = {'maxiter': 1000, 'tol': 1e-7}
+        default_options.update(options)
+        opts = default_options
 
         def ff(x, w):
             distances = JJ(functools.partial(agg_dist, None))(x)
@@ -298,14 +301,11 @@ def geometric_median(data, weights=None, init_guess=None, \
             distances = np.where(distances == 0, 1, distances)
             return w / distances
 
+        iters = 0
+        guess = init_guess
+
         if method == 'weiszfeld':
             # Weiszfeld's algorithm of iteratively re-weighted least squares
-            default_options = {'maxiter': 1000, 'tol': 1e-7}
-            default_options.update(options)
-            opts = default_options
-
-            iters = 0
-            guess = init_guess
             while iters < opts['maxiter']:
                 w_div_d = ff(guess, weights) # weights devided by distances
                 guess_next = (data.T*w_div_d).sum(axis=1) / (w_div_d).sum()
@@ -320,12 +320,6 @@ def geometric_median(data, weights=None, init_guess=None, \
         elif method == 'modified_weiszfeld':
             # Modified Weiszfeld's algorithm of iteratively re-weighted least squares
             # https://www.pnas.org/content/97/4/1423
-            default_options = {'maxiter': 1000, 'tol': 1e-7}
-            default_options.update(options)
-            opts = default_options
-
-            iters = 0
-            guess = init_guess
             while iters < opts['maxiter']:
                 eq_idx = np.equal(data, guess).all(axis=1)
                 if eq_idx.any():
