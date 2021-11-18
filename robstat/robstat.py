@@ -260,7 +260,8 @@ def geometric_median(data, weights=None, init_guess=None, \
             ed *= weights
         return ed
 
-    ff = JJ(functools.partial(agg_dist, weights))
+    method_err = 'specify valid method: must be either "minimize", '\
+                 '"weiszfeld" or "modified_weiszfeld".'
 
     if method == 'minimize':
         # Solve as a convex optimization problem
@@ -269,8 +270,8 @@ def geometric_median(data, weights=None, init_guess=None, \
         default_options.update(options)
         opts = default_options
 
-        ffs = lambda x: ff(x).sum()
-        res = jminimize(ffs, np.array(init_guess, ndmin=1), method=opts['min_method'], \
+        ff = lambda x: JJ(functools.partial(agg_dist, weights))(x).sum()
+        res = jminimize(ff, np.array(init_guess, ndmin=1), method=opts['min_method'], \
                         options={'maxiter':opts['maxiter']}, tol=opts['tol'])
 
         if pJAX:
@@ -288,36 +289,69 @@ def geometric_median(data, weights=None, init_guess=None, \
         else:
             resx = res['x']
 
-    elif method == 'weiszfeld':
-        # Weiszfeld's algorithm of iteratively re-weighted least squares
-        default_options = {'maxiter': 1000, 'tol': 1e-7}
-        default_options.update(options)
-        opts = default_options
+    elif 'weiszfeld' in method:
 
-        iters = 0
-        guess = init_guess
-        while iters < opts['maxiter']:
-            distances = ff(guess)
-
-            # catch divide by zero
-            # look at modified Weiszfeld algorithm here:
-            # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC26449/pdf/pq001423.pdf
+        def ff(x, w):
+            distances = JJ(functools.partial(agg_dist, None))(x)
+            # catch divide by zero that causes algorithm to get stuck
+            # displace problematic distance slightly
             distances = np.where(distances == 0, 1, distances)
+            return w / distances
 
-            guess_next = (data.T/distances).sum(axis=1) / (1./distances).sum()
-            guess_movement = np.sqrt(((guess - guess_next)**2).sum())
-            guess = guess_next
+        if method == 'weiszfeld':
+            # Weiszfeld's algorithm of iteratively re-weighted least squares
+            default_options = {'maxiter': 1000, 'tol': 1e-7}
+            default_options.update(options)
+            opts = default_options
 
-            if guess_movement <= opts['tol']:
-                break
+            iters = 0
+            guess = init_guess
+            while iters < opts['maxiter']:
+                w_div_d = ff(guess, weights) # weights devided by distances
+                guess_next = (data.T*w_div_d).sum(axis=1) / (w_div_d).sum()
+                guess_movement = np.sqrt(((guess - guess_next)**2).sum())
+                guess = guess_next
+                if guess_movement <= opts['tol']:
+                    break
+                iters += 1
 
-            iters += 1
+            resx = guess
 
-        resx = guess
+        elif method == 'modified_weiszfeld':
+            # Modified Weiszfeld's algorithm of iteratively re-weighted least squares
+            # https://www.pnas.org/content/97/4/1423
+            default_options = {'maxiter': 1000, 'tol': 1e-7}
+            default_options.update(options)
+            opts = default_options
+
+            iters = 0
+            guess = init_guess
+            while iters < opts['maxiter']:
+                eq_idx = np.equal(data, guess).all(axis=1)
+                _weights = np.where(eq_idx, 0, weights)
+                w_div_d = ff(guess, _weights)
+                T = (data.T*w_div_d).sum(axis=1) / (w_div_d).sum()
+                R = (T - guess) * (w_div_d).sum()
+                r = np.sqrt(np.sum(np.square(R)))
+                r = np.where(r == 0, r, 1) # replace zeros with ones s.t. "0/0 = 0" below
+                mod_weight = weights[eq_idx.nonzero()[0]] if eq_idx.any() else 0
+                w_div_r = mod_weight / r
+                guess_next = (1 - w_div_r)*T + min(1, w_div_r)*guess
+                guess_movement = np.sqrt(((guess - guess_next)**2).sum())
+                guess = guess_next
+
+                if guess_movement <= opts['tol']:
+                    break
+
+                iters += 1
+
+            resx = guess
+
+        else:
+            raise ValueError(method_err)
 
     else:
-        raise ValueError('specify valid method: must be either "minimize" or '\
-                         '"weiszfeld".')
+        raise ValueError(method_err)
 
     if Cdata:
         resx = resx[0] + 1j*resx[1]
