@@ -328,15 +328,19 @@ def geometric_median(data, weights=None, init_guess=None, \
             guess = init_guess
             while iters < opts['maxiter']:
                 eq_idx = np.equal(data, guess).all(axis=1)
-                _weights = np.where(eq_idx, 0, weights)
-                w_div_d = ff(guess, _weights)
-                T = (data.T*w_div_d).sum(axis=1) / (w_div_d).sum()
-                R = (T - guess) * (w_div_d).sum()
-                r = np.sqrt(np.sum(np.square(R)))
-                r = np.where(r == 0, r, 1) # replace zeros with ones s.t. "0/0 = 0" below
-                mod_weight = weights[eq_idx.nonzero()[0]] if eq_idx.any() else 0
-                w_div_r = mod_weight / r
-                guess_next = (1 - w_div_r)*T + min(1, w_div_r)*guess
+                if eq_idx.any():
+                    _weights = np.where(eq_idx, 0, weights)
+                    w_div_d = ff(guess, _weights)
+                    T = (data.T*w_div_d).sum(axis=1) / (w_div_d).sum()
+                    R = (T - guess) * (w_div_d).sum()
+                    r = np.sqrt(np.sum(np.square(R)))
+                    r = np.where(r == 0, r, 1) # replace zeros with ones s.t. "0/0 = 0" below
+                    mod_weight = weights[eq_idx.nonzero()[0]]
+                    w_div_r = mod_weight / r
+                    guess_next = (1 - w_div_r)*T + min(1, w_div_r)*guess
+                else:
+                    w_div_d = ff(guess, weights) # weights devided by distances
+                    guess_next = (data.T*w_div_d).sum(axis=1) / (w_div_d).sum()
                 guess_movement = np.sqrt(((guess - guess_next)**2).sum())
                 guess = guess_next
 
