@@ -294,6 +294,9 @@ def geometric_median(data, weights=None, init_guess=None, \
         default_options.update(options)
         opts = default_options
 
+        if weights is None:
+            weights = np.ones(data.shape[0])
+
         def ff(x, w):
             distances = JJ(functools.partial(agg_dist, None))(x)
             # catch divide by zero that causes algorithm to get stuck
