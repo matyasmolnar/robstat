@@ -77,6 +77,7 @@ def main():
         # load dataset
         sample_xd_data = np.load(xd_vis_file_path)
 
+        global xd_data, xd_flags
         xd_data = sample_xd_data['data']  # dimensions (days, freqs, times, bls)
         xd_redg = sample_xd_data['redg']
         xd_rad_lsts = sample_xd_data['lsts']
