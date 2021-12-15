@@ -47,9 +47,14 @@ def main():
                         metavar='I', type=str, help='Directory in which input visibility file lives')
     parser.add_argument('-o', '--out_dir', required=False, default=None,
                         metavar='O', type=str, help='Directory in which to save filtered visibilities')
-    parser.add_argument('-m', '--multi_proc', required=False, default=False,
-                        metavar='M', type=bool, help='Whether to employ multiprocessing across day \
-                        baseline slices')
+    parser.add_argument('-e', '--ext', required=False, default='hpf',
+                        metavar='E', type=str, help='HPF file extension')
+    parser.add_argument('-m', '--mode', required=False, default='dayenu_dpss_leastsq',
+                        metavar='M', type=str, help='Filtering mode')
+    parser.add_argument('-w', '--flt_width', required=False, default=1.5,
+                        metavar='W', type=float, help='Filter half width, in ms')
+    parser.add_argument('-p', '--multi_proc', required=False, action='store_true',
+                        help='Whether to employ multiprocessing across day baseline slices')
     args = parser.parse_args()
 
     xd_vis_file = args.vis_file
@@ -63,8 +68,8 @@ def main():
         path.mkdir(parents=True)
 
     xd_vis_file_path = os.path.join(in_dir, xd_vis_file)
-    hpf_vis_file = os.path.join(out_dir, xd_vis_file.replace('.npz', '_hpf.npz'))
-    
+    hpf_vis_file = os.path.join(out_dir, xd_vis_file.replace('.npz', '_{}.npz'.format(args.ext)))
+
     mp = args.multi_proc
 
     if not os.path.exists(hpf_vis_file):
@@ -96,8 +101,8 @@ def main():
 
         # HPF with DAYENU
         filter_centers = [0.] # center of rectangular fourier regions to filter
-        filter_half_widths = [1.5e-6] # half-width of rectangular fourier regions to filter
-        mode = 'dayenu_dpss_leastsq'
+        filter_half_widths = [args.flt_width*1e-6] # half-width of rectangular fourier regions to filter
+        mode = args.mode
 
         skipped_slices = []
 
@@ -125,10 +130,14 @@ def main():
                     wgts = np.logical_not(flgs_tr).astype(float)
                     freqs_tr = freqs[s:e]
 
+                    filter_kwargs = dict()
+                    if mode != 'clean':
+                        filter_kwargs['max_contiguous_edge_flags'] = no_chans
+
                     try:
                         _, d_res_tr, info = uvtools.dspec.fourier_filter(freqs_tr, data_tr, wgts, filter_centers,
                             filter_half_widths, mode, filter_dims=0, skip_wgt=0., zero_residual_flags=True, \
-                            max_contiguous_edge_flags=data_tr.shape[0])
+                            **filter_kwargs)
 
                         status_dict = info['status']['axis_0']
                         if 'skipped' in status_dict.values():
@@ -154,7 +163,7 @@ def main():
 
                                 _, d_res_tr_t, info = uvtools.dspec.fourier_filter(freqs_t_tr, data_t_tr, wgts, filter_centers,
                                     filter_half_widths, mode, filter_dims=1, skip_wgt=0., zero_residual_flags=True, \
-                                    max_contiguous_edge_flags=data_t_tr.size)
+                                    **filter_kwargs)
 
                                 d_res_t[s_t:e_t] = d_res_tr_t
                                 d_res_tr[:, tint] = d_res_t
@@ -189,7 +198,7 @@ def main():
 
                             _, d_res_tr_t, info = uvtools.dspec.fourier_filter(freqs_t_tr, data_t_tr, wgts, filter_centers,
                                 filter_half_widths, mode, filter_dims=1, skip_wgt=0., zero_residual_flags=True, \
-                                max_contiguous_edge_flags=data_t_tr.size)
+                                **filter_kwargs)
 
                             if info['info_deconv']['status']['axis_1'][0] == 'skipped' or info['status']['axis_1'][0] == 'skipped':
                                 skipped_slices.append((day, tint, bl))
@@ -235,7 +244,7 @@ def main():
             metadata['antpos'] = np.load(xd_vis_file_path, allow_pickle=True)['antpos'].item()
 
         np.savez(hpf_vis_file, data=hpf_data, skipped=skipped_slices,
-                 filter_half_widths=filter_half_widths, **metadata)
+                 filter_half_widths=filter_half_widths, mode=mode, **metadata)
         print('HPF visibility file saved to: {}'.format(hpf_vis_file))
 
     print('HPF visibility file already exists at: {}'.format(hpf_vis_file))
