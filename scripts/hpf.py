@@ -2,6 +2,7 @@ import argparse
 import multiprocess as multiprocessing
 import os
 import textwrap
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -221,13 +222,17 @@ def main():
 
             return hpf_data_d[..., np.newaxis]
 
-        if mp:
-            m_pool = multiprocessing.Pool(min(multiprocessing.cpu_count(), no_bls))
-            pool_res = m_pool.map(bl_iter, range(no_bls))
-            m_pool.close()
-            m_pool.join()
-        else:
-            pool_res = list(map(bl_iter, range(no_bls)))
+        with warnings.catch_warnings():
+            # ignore warnings that come from empty slices
+            warnings.simplefilter('ignore', category=RuntimeWarning)
+
+            if mp:
+                m_pool = multiprocessing.Pool(min(multiprocessing.cpu_count(), no_bls))
+                pool_res = m_pool.map(bl_iter, range(no_bls))
+                m_pool.close()
+                m_pool.join()
+            else:
+                pool_res = list(map(bl_iter, range(no_bls)))
 
         hpf_data = np.concatenate(pool_res, axis=3)
 
