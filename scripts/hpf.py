@@ -53,7 +53,7 @@ def main():
     parser.add_argument('-m', '--mode', required=False, default='dayenu_dpss_leastsq',
                         metavar='M', type=str, help='Filtering mode')
     parser.add_argument('-w', '--flt_width', required=False, default=1.5,
-                        metavar='W', type=float, help='Filter half width, in ms')
+                        metavar='W', type=float, help='Filter half width, in μs')
     parser.add_argument('-p', '--multi_proc', required=False, action='store_true',
                         help='Whether to employ multiprocessing across day baseline slices')
     args = parser.parse_args()
@@ -78,7 +78,7 @@ def main():
         # load dataset
         sample_xd_data = np.load(xd_vis_file_path)
 
-        global xd_data, xd_flags
+        global xd_data, xd_flags, no_days, no_chans, no_tints
         xd_data = sample_xd_data['data']  # dimensions (days, freqs, times, bls)
         xd_redg = sample_xd_data['redg']
         xd_rad_lsts = sample_xd_data['lsts']
