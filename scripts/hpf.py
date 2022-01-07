@@ -101,7 +101,7 @@ def main():
         no_bls = xd_data.shape[3]
 
 
-        # HPF with DAYENU
+        # HPF parameters
         filter_centers = [0.] # center of rectangular fourier regions to filter
         filter_half_widths = [args.flt_width*1e-6] # half-width of rectangular fourier regions to filter
         mode = args.mode
@@ -253,7 +253,8 @@ def main():
                  filter_half_widths=filter_half_widths, mode=mode, **metadata)
         print('HPF visibility file saved to: {}'.format(hpf_vis_file))
 
-    print('HPF visibility file already exists at: {}'.format(hpf_vis_file))
+    else:
+        print('HPF visibility file already exists at: {}'.format(hpf_vis_file))
 
 
 if __name__ == '__main__':
