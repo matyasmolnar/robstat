@@ -51,11 +51,11 @@ def mad_clip(data, flags=None, sigma=4.0, axis=0, min_N=4, verbose=False):
         utils.echo('No sigma clipping performed as length of array for specified axis ' \
                    '< min_N.', verbose=verbose)
         if flags is None:
-            flags = np.zeros_like(data, np.bool)
+            flags = np.zeros_like(data, dtype=bool)
         return data, flags
 
     # create empty clip_flags array
-    clip_flags = np.zeros_like(data, np.bool)
+    clip_flags = np.zeros_like(data, dtype=bool)
 
     # inherit flags if fed and apply flags to data
     if flags is not None:
