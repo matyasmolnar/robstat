@@ -13,7 +13,7 @@
 #SBATCH --nodes=1                                             # Request 1 node
 #SBATCH --ntasks-per-node=8                                   # Request 8 cores
 #SBATCH --time=48:00:00                                       # Request 48 hours, 0 minutes and 0 seconds.
-#SBATCH --output=hpf.out
+#SBATCH --output=rmdo.out
 
 source ~/.bashrc
 
