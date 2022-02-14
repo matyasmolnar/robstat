@@ -11,7 +11,7 @@ from matplotlib.colors import LinearSegmentedColormap
 def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None, \
                  center=None, annot=False, fmt=None, xbase=5, ybase=10, titles=None, \
                  share_cbar=True, cbar_loc=None, cmap=sns.cm.rocket_r, xlabels=None, \
-                 ylabel=None, yticklabels=None, figsize=(14, 6)):
+                 ylabel=None, yticklabels=None, save_path=None, figsize=(14, 6)):
     """
     Plot a row of heatmaps with shared colour bar.
 
@@ -34,6 +34,7 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
         xlabels (str, list): xlabels for individual heatmaps.
         ylabel (str): ylabel for heatmap row.
         yticklabels (list, ndarray): set labels for y axis.
+        save_path (str): path to save figure
         figsize (tuple): width, height in inches.
     """
     if isinstance(arrs, np.ndarray):
@@ -157,6 +158,9 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
 
     if share_cbar:
         fig.colorbar(axes[0].collections[0], cax=axes[-1])
+
+    if save_path is not None:
+        plt.savefig(save_path, bbox_inches='tight')
 
     plt.show()
 
