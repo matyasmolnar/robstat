@@ -168,7 +168,7 @@ def row_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None,
 def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None, \
                   center=None, annot=False, fmt=None, xbase=5, ybase=10, titles=None, \
                   xlabels=None, ylabels=None, share_cbar=True, cmap=sns.cm.rocket_r, \
-                  yticklabels=None, figsize=(14, 6)):
+                  yticklabels=None, save_path=None, figsize=(14, 6)):
     """
     Plot a row of heatmaps with shared colour bar.
 
@@ -187,6 +187,7 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
         share_cbar (bool): whether to have the same color bar for all plots across rows.
         cmap (str, colormap object): color map for heatmaps.
         yticklabels (list, ndarray): set labels for y axis.
+        save_path (str): path to save figure
         figsize (tuple): width, height in inches.
     """
     if isinstance(arrs, np.ndarray):
@@ -256,6 +257,10 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
 
     yticklabels_on = yticklabels is None
 
+    rasterized = False
+    if save_path is not None:
+        rasterized = '.pdf' in save_path
+
     for col, arr in enumerate(arrs):
         for row, a in enumerate(arr):
             if row == len(arr) - 1:
@@ -267,7 +272,7 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
                 vmax = vmax_arr[row]
             ax = sns.heatmap(a, cmap=cmap, ax=axes[row][col], cbar=not share_cbar, \
                         vmin=vmin, vmax=vmax, center=center, annot=annot, fmt=fmt, \
-                        xticklabels=xticklabels, yticklabels=yticklabels_on)
+                        xticklabels=xticklabels, yticklabels=yticklabels_on, rasterized=rasterized)
             if row == len(arr) - 1:
                 ax.set_xticklabels(ax.get_xticklabels(), rotation=0)
                 ax.xaxis.set_major_locator(ticker.MultipleLocator(xbase))
@@ -294,6 +299,9 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
                     fig.colorbar(axes[row][0].collections[0], cax=axes[row][-1])
                 if ylabels is not None:
                     ax.set_ylabel(ylabels[row])
+
+    if save_path is not None:
+        plt.savefig(save_path, bbox_inches='tight')
 
     plt.show()
 
