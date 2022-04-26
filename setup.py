@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 VERSION = '0.0.1'
 DESCRIPTION = 'ROBust STATistical package for data analysis'
-LONG_DESCRIPTION = 'My first Python package with a slightly longer description'
+LONG_DESCRIPTION = 'ROBust STATistical package for data analysis'
 
 # Setting up
 setup(
