@@ -19,7 +19,7 @@ Preferred installation method is `pip install .` in top-level directory. Alterna
 
 ## Included functions
 
-* [L1-median](https://en.wikipedia.org/wiki/Geometric_median) - also known as the geometric median
+* [Geometric median](https://en.wikipedia.org/wiki/Geometric_median) - also known as the L1-median
 * Tukey median - as well as other medians that also employ the notion of location depth, e.g. Oja, Spatial (Tukey, 1975)
 * Mardia median - for directional data (Mardia, 1972)
 
