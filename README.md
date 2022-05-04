@@ -24,5 +24,6 @@ Preferred installation method is `pip install .` in top-level directory. Alterna
 * Mardia median - for directional data (Mardia, 1972)
 
 ### Associated publications:
+
 - [HERA Memorandum #106: Non-Gaussian Effects and Robust Location Estimates of Aggregated Calibrated Visibilities](http://reionization.org/manual_uploads/HERA106_Non-Gaussian_Effects_and_Robust_Location_Estimates_of_Aggregated_Calibrated_Visibilities.pdf)
 - [HERA Memorandum #110: Multivariate Outlier Detection Using Robust Mahalanobis Distances](http://reionization.org/manual_uploads/HERA110_Multivariate_Outlier_Detection_Using_Robust_Mahalanobis_Distances.pdf)
