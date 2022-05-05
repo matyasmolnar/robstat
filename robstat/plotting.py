@@ -271,8 +271,8 @@ def grid_heatmaps(arrs, apply_np_fn=None, clip_pctile=None, vmin=None, vmax=None
                 vmin = vmin_arr[row]
                 vmax = vmax_arr[row]
             ax = sns.heatmap(a, cmap=cmap, ax=axes[row][col], cbar=not share_cbar, \
-                        vmin=vmin, vmax=vmax, center=center, annot=annot, fmt=fmt, \
-                        xticklabels=xticklabels, yticklabels=yticklabels_on, rasterized=rasterized)
+                vmin=vmin, vmax=vmax, center=center, annot=annot, fmt=fmt, \
+                xticklabels=xticklabels, yticklabels=yticklabels_on, rasterized=rasterized)
             if row == len(arr) - 1:
                 ax.set_xticklabels(ax.get_xticklabels(), rotation=0)
                 ax.xaxis.set_major_locator(ticker.MultipleLocator(xbase))
