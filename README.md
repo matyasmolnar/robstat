@@ -1,8 +1,8 @@
 # robstat
 
-Robust statistical location estimates for multivariate data.
+Robust statistical methods for multivariate data.
 
-This package contains a range of functions that provides robust location estimates of directional and high-dimensional data. Applications for the latter include the median of complex quantities, such as radio interferometric visibilities.
+This package contains a range of functions that provides robust location and scale estimates of directional and high-dimensional data. Applications for the latter include the median of complex quantities, such as radio interferometric visibilities.
 
 [`NumPy`](https://github.com/numpy/numpy) computations and [`SciPy`](https://github.com/scipy/scipy) minimizations are accelerated with the [`JAX`](https://github.com/google/jax) machine learning library.
 
