@@ -3,29 +3,20 @@ zen.2458098.43869.HH.OCRSA.uvh5:
 Reduced subset of the fully calibrated zen.2458098.43869.HH.OCRS.uvh5 dataset, to
 be read with hera_cal.io.HERAData.
 Time integrations: first 20 from zen.2458098.43869.HH.uvh5 dataset
-LSTS: 1.3826 - 1.3975
+LSTS: 5.281 - 5.338 h
 Channels: 600 - 624
-Frequencies: 1.5859e+08 - 1.6094e+08
+Frequencies: 1.586 - 1.609 MHz
 Polarization: EE
 Baselines: the short 14m baselines (all orientations, thus making 3 redundant groups)
 
 
-xd_vis.npz:
+sample_vis_data.npz:
 
-Quickly accessible savez'd numpy array. Aligned with 2458098.438695 using
-xd_utils.XDgroup_data from simpleredcal.
-JDs: H1C_IDR2.2 JDs apart from 2458109
+Quickly accessible savez'd numpy array of HERA H1C_IDR2.2 LST-aligned visibilities.
+JDs: H1C_IDR2.2 JDs
+Dimensions: (36, 5, 5, 64) = (Days x 2 tints, Frequencies, Times, Baselines)
+LSTs: 5.387 - 5.411 h
 Channels: 600 - 604
-Frequencies: 1.5859e+08 - 1.5898e+08
-Time integrations: first 6 from zen.2458098.43869.HH.uvh5 dataset and those aligned
-in LST with those from the other datasets on the other JDs
-LSTs: 1.3826 - 1.3865
+Frequencies: 1.5859e+08 - 1.5898e+08 Hz
 Polarization: EE
 Baselines: the short 14m baselines (all orientations, thus making 3 redundant groups)
-Dimensions: (17, 5, 6, 64) = (Days, Frequencies, Times, Baselines)
-
-
-xd_vis_rph.npz:
-
-Same as xd_vis.npz, although the complex visibilities have been rephased to the mean
-of the LSTs that have been aligned across JDs.
